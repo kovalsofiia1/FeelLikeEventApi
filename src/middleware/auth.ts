@@ -6,7 +6,7 @@ import { verifyToken } from 'utils/jwtUtils';
 const authMiddleware = async (req, _, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
-        return next(new HttpErrors(401, 'Authorization header missing'));
+        return next(new HttpErrors(401, 'Not authorized'));
     }
 
     const [bearer, token] = authHeader.split(' ');
@@ -23,8 +23,7 @@ const authMiddleware = async (req, _, next) => {
         }
 
         req.user = {
-            id: user._id,
-            name: user.name,
+            id: user._id?.toString(),
             email: user.email,
         };
         next();

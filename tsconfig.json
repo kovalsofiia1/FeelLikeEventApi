@@ -16,7 +16,15 @@
     "skipLibCheck": true,
     "sourceMap": true,
     "strictNullChecks": true,
-    "target": "es2019"
+    "target": "es2019",
+    "typeRoots": [
+      "./node_modules/@types",
+      "./types"
+    ],
+    "types": [
+      "node",
+      "express"
+    ]
   },
   "include": [
     "src/**/*.ts" // Include all TypeScript files under 'src'
