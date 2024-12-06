@@ -4,10 +4,11 @@ import { EventDocument } from 'types/events/EventTypes';
 import mongoose from 'mongoose';
 import { isDataURI } from 'class-validator';
 
-export interface UserRequest extends Request {
+interface UserRequest extends Request {
     user?: {
         id: string,
-        email: string
+        email: string,
+        status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
     }
 }
 

@@ -1,6 +1,4 @@
 import { Request, RequestHandler, Response } from "express";
-import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import { generateToken } from "utils/jwtUtils";
 import controllerWrapper from "helpers/controllerWrapper";
@@ -10,19 +8,19 @@ const login: RequestHandler = controllerWrapper(async (req: Request, res: Respon
     const { email, password } = req.body;
     const existingUser = await User.findOne({ email }).exec();
     if (!existingUser) {
-        throw new HttpErrors(401, 'Email or password is wrong');
+        throw new HttpErrors(400, 'Email or password is wrong');
     }
 
     const isPasswordValid = await existingUser.comparePassword(password);
     if (!isPasswordValid) {
-        throw new HttpErrors(401, 'Email or password is wrong');
+        throw new HttpErrors(400, 'Email or password is wrong');
     }
 
     const token = generateToken(existingUser.email, existingUser._id);
 
     await User.findByIdAndUpdate(existingUser._id, { token });
 
-    res.status(200).json({ user: { id: existingUser._id, name: existingUser.name, email: existingUser.email }, token })
+    res.status(200).json({ user: { id: existingUser._id, name: existingUser.name, email: existingUser.email, status: existingUser.status }, token })
 
 })
 
@@ -52,7 +50,8 @@ const register: RequestHandler = controllerWrapper(async (req: Request, res: Res
         token,
         user: {
             name: newUser.name,
-            email: newUser.email
+            email: newUser.email,
+            status: newUser.status
         },
     });
 })

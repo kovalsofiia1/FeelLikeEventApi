@@ -22,10 +22,13 @@ const authMiddleware = async (req, _, next) => {
             throw new HttpErrors(401, 'Invalid token or user not found');
         }
 
+        // Add user details to the request object
         req.user = {
             id: user._id?.toString(),
             email: user.email,
+            status: user.status,
         };
+
         next();
     } catch (error) {
         next(error);

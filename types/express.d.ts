@@ -6,6 +6,7 @@ declare global {
             user?: {
                 id: string;
                 email: string;
+                status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
             };
         }
     }

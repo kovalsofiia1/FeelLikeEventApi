@@ -14,10 +14,5 @@ const router = express.Router();
 router.post('/login', validateBody(loginSchema), AuthController.login);
 router.post('/register', validateBody(registerSchema), AuthController.register);
 router.post('/logout', authMiddleware, AuthController.logout);
-router.patch(
-    '/',
-    authMiddleware,
-    validateBody(profileSchema),
-    AuthController.updateProfile
-);
+
 export default router;

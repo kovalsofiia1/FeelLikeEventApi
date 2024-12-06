@@ -7,9 +7,12 @@ interface IUser extends Document {
     name: string;
     email: string;
     password: string;
+    status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
     token: string;
     avatarURL: string;
     googleId?: string;
+    interests: mongoose.Types.ObjectId[];
+    description?: string,
     comparePassword(password: string): Promise<boolean>;
 }
 
@@ -36,6 +39,13 @@ const userSchema = new mongoose.Schema<IUser>(
             match: EMAIL_PATTERN,
         },
 
+        status: {
+            type: String,
+            enum: ['ADMIN', 'USER', 'VERIFIED_USER'],
+            required: [true, 'Status is required'],
+            default: 'USER',
+        },
+
         token: {
             type: String,
             default: null,
@@ -46,6 +56,22 @@ const userSchema = new mongoose.Schema<IUser>(
             required: false,
         },
 
+        description: {
+            type: String,
+            required: false,
+        },
+
+        interests: [{
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Interest', // Reference the Interest model
+            required: false,
+        }],
+
+        googleId: {
+            type: String,
+            unique: true,
+            default: null,
+        },
         // verify: {
         //     type: Boolean,
         //     default: false,
@@ -55,12 +81,6 @@ const userSchema = new mongoose.Schema<IUser>(
         //     type: String,
         //     required: [true, 'Verify token is required'],
         // },
-
-        googleId: {
-            type: String,
-            unique: true,
-            default: null,
-        },
     },
     { timestamps: true }
 );
