@@ -12,7 +12,7 @@ interface UserRequest extends Request {
 // Get the currently authenticated user's data
 export const getMyData: RequestHandler = async (req: UserRequest, res: Response, next: NextFunction) => {
   try {
-    const user = await User.findById(req.user?.id).select('-password'); // Exclude password from response
+    const user = await User.findById(req.user?.id).select('-password -token -googleId -verified'); // Exclude password from response
     if (!user) {
       return next(new HttpErrors(404, 'User not found'));
     }
@@ -26,7 +26,7 @@ export const getMyData: RequestHandler = async (req: UserRequest, res: Response,
 export const getOtherUserData = async (req: UserRequest, res: Response, next: NextFunction) => {
   const { userId } = req.params; // Extract userId from params
   try {
-    const user = await User.findById(userId).select('-password'); // Exclude password from response
+    const user = await User.findById(userId).select('-password -token -googleId -verified'); // Exclude password from response
     if (!user) {
       return next(new HttpErrors(404, 'User not found'));
     }
@@ -38,14 +38,14 @@ export const getOtherUserData = async (req: UserRequest, res: Response, next: Ne
 
 // Update the current user's profile
 export const updateProfile = async (req: UserRequest, res: Response, next: NextFunction) => {
-  const { name, email, description, avatarURL } = req.body;
+  const { name, email, profileDescription, avatarURL } = req.body;
 
   try {
     const updatedUser = await User.findByIdAndUpdate(
       req.user?.id,
-      { name, email, description, avatarURL },
+      { name, email, profileDescription, avatarURL },
       { new: true, runValidators: true } // Return updated document and run validations
-    ).select('-password'); // Exclude password from response
+    ).select('-password -token -googleId -verified'); // Exclude password from response
 
     if (!updatedUser) {
       return next(new HttpErrors(404, 'User not found'));
@@ -59,8 +59,8 @@ export const updateProfile = async (req: UserRequest, res: Response, next: NextF
 
 // Change a user's status (only accessible by Admin)
 export const changeUserStatus = async (req: UserRequest, res: Response, next: NextFunction) => {
-  const { userId } = req.params; // Get the user ID from params
-  const { status } = req.body; // Get the new status from the body
+  const { userId } = req.params;
+  const { status } = req.body;
 
   if (status && !['ADMIN', 'USER', 'VERIFIED_USER'].includes(status)) {
     return next(new HttpErrors(400, 'Invalid status'));

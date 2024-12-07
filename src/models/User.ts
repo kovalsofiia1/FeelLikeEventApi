@@ -2,17 +2,18 @@ import mongoose, { Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
 import { EMAIL_PATTERN, USERNAME_PATTERN } from 'helpers/constants';
 
-// Define an interface for the User document
+
 interface IUser extends Document {
     name: string;
     email: string;
     password: string;
     status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
-    token: string;
     avatarURL?: string;
     googleId?: string;
     interests: mongoose.Types.ObjectId[];
-    description?: string,
+    verified: boolean;
+    profileDescription?: string,
+    token: string,
     comparePassword(password: string): Promise<boolean>;
 }
 
@@ -46,24 +47,19 @@ const userSchema = new mongoose.Schema<IUser>(
             default: 'USER',
         },
 
-        token: {
-            type: String,
-            default: null,
-        },
-
         avatarURL: {
             type: String,
             required: false,
         },
 
-        description: {
+        profileDescription: {
             type: String,
             required: false,
         },
 
         interests: [{
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'Interest', // Reference the Interest model
+            ref: 'EventTag', // Reference the Interest model
             required: false,
         }],
 
@@ -72,15 +68,15 @@ const userSchema = new mongoose.Schema<IUser>(
             unique: true,
             default: null,
         },
-        // verify: {
-        //     type: Boolean,
-        //     default: false,
-        // },
 
-        // verificationToken: {
-        //     type: String,
-        //     required: [true, 'Verify token is required'],
-        // },
+        verified: {
+            type: Boolean,
+            default: false
+        },
+        token: {
+            type: String,
+            required: true
+        }
     },
     { timestamps: true }
 );
