@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 import { isDataURI } from 'class-validator';
 import { Comment } from 'models/Comment';
 import { Booking } from 'models/Booking';
+import { EventTag } from 'models/EventTag';
 
 interface UserRequest extends Request {
     user?: {
@@ -20,6 +21,23 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
     const userId = req.user?.id;
     const isUserVerified = req.user?.status === 'VERIFIED_USER';
     try {
+        if (tags && !Array.isArray(tags)) {
+            res.status(400).json({ message: 'Tags must be an array' });
+            return;
+        }
+
+        // Check if tags are provided in the request
+        if (tags && tags.length > 0) {
+            // Fetch all tags from the database
+            const existingTags = await EventTag.find({ '_id': { $in: tags } });
+
+            // Check if all tags in the request exist in the database
+            if (existingTags.length !== tags.length) {
+                res.status(400).json({ message: 'One or more tags do not exist in the database' });
+                return;
+            }
+        }
+
         const newEvent = new Event({
             name,
             description,
@@ -86,6 +104,24 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             res.status(403).json({ message: 'You are not authorized to delete this event' });
             return;
         }
+
+        if (tags && !Array.isArray(tags)) {
+            res.status(400).json({ message: 'Tags must be an array' });
+            return;
+        }
+
+        // Check if tags are provided in the request
+        if (tags && tags.length > 0) {
+            // Fetch all tags from the database
+            const existingTags = await EventTag.find({ '_id': { $in: tags } });
+
+            // Check if all tags in the request exist in the database
+            if (existingTags.length !== tags.length) {
+                res.status(400).json({ message: 'One or more tags do not exist in the database' });
+                return;
+            }
+        }
+
 
         await Event.findByIdAndUpdate(req.params.id, {
             name,
