@@ -9,7 +9,7 @@ interface IUser extends Document {
     password: string;
     status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
     token: string;
-    avatarURL: string;
+    avatarURL?: string;
     googleId?: string;
     interests: mongoose.Types.ObjectId[];
     description?: string,

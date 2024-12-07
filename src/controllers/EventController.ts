@@ -1,8 +1,10 @@
 import { Request, RequestHandler, Response } from 'express';
-import Event from "../models/Event";
+import Event, { EventStatus } from "../models/Event";
 import { EventDocument } from 'types/events/EventTypes';
 import mongoose from 'mongoose';
 import { isDataURI } from 'class-validator';
+import Comment from 'models/Comment';
+import Booking from 'models/Booking';
 
 interface UserRequest extends Request {
     user?: {
@@ -13,9 +15,10 @@ interface UserRequest extends Request {
 }
 
 const createEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
-    const { name, description, eventType, startDate, endDate, location, address, image, availableSeats, rating, customFields } = req.body;
+    const { name, description, eventType, startDate, endDate, location, address, image, totalSeats, rating, customFields } = req.body;
 
     const userId = req.user?.id;
+    const isUserVerified = req.user?.status === 'VERIFIED_USER';
     try {
         const newEvent = new Event({
             name,
@@ -26,10 +29,12 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             location,
             address,
             image,
-            availableSeats,
+            availableSeats: totalSeats,
+            totalSeats,
             rating,
             customFields,
-            createdBy: userId
+            createdBy: userId,
+            eventStatus: isUserVerified ? 'VERIFIED' : 'CREATED'
         });
 
         await newEvent.save();
@@ -56,8 +61,8 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 const getEventById: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     try {
         const event = await Event.findById(req.params.id)
-            .populate('whoBooked', 'name email')
-            .populate('comments.user', 'name email')
+            // .populate('whoBooked', 'name email')
+            // .populate('comments.user', 'name email')
             .exec();
 
         if (!event) {
@@ -72,8 +77,10 @@ const getEventById: RequestHandler = async (req: UserRequest, res: Response): Pr
 
 const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
 
-    const { name, description, eventType, startDate, endDate, location, address, image, availableSeats, rating, customFields } = req.body;
+    const { name, description, eventType, startDate, endDate, location, address, image, totalSeats, rating, customFields } = req.body;
     const userId = req.user?.id;
+    const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+
     try {
 
         const event = await Event.findById(req.params.id);
@@ -83,7 +90,7 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             return;
         }
 
-        if (event.createdBy!.toString() !== userId) {
+        if (event.createdBy!.toString() !== userId || !userIsAdmin) {
             res.status(403).json({ message: 'You are not authorized to delete this event' });
             return;
         }
@@ -97,7 +104,7 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             location,
             address,
             image,
-            availableSeats,
+            totalSeats,
             rating,
             customFields
         }, { new: true });
@@ -114,7 +121,7 @@ const deleteEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
     try {
 
         const userId = req.user?.id;
-
+        const userIsAdmin = req.user?.status === 'VERIFIED_USER';
         const event = await Event.findById(req.params.id);
 
         if (!event) {
@@ -122,7 +129,7 @@ const deleteEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             return;
         }
 
-        if (event.createdBy!.toString() !== userId) {
+        if (event.createdBy!.toString() !== userId || !userIsAdmin) {
             res.status(403).json({ message: 'You are not authorized to delete this event' });
             return;
         }
@@ -143,9 +150,12 @@ const addComment: RequestHandler = async (req: UserRequest, res: Response): Prom
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
         } else {
-            const comment = { user: userId, text };
-            event.comments.push(comment);
-            await event.save();
+            const comment = new Comment({
+                user: userId,
+                text,
+                eventId,
+            });
+            await comment.save();
             res.status(200).json({ message: 'Comment added successfully', event });
         }
     } catch (err: any) {
@@ -153,76 +163,104 @@ const addComment: RequestHandler = async (req: UserRequest, res: Response): Prom
     }
 };
 
+
 const deleteComment: RequestHandler = async (req: UserRequest, res: Response) => {
     const { eventId, commentId } = req.params;
     const userId = req.user?.id;
 
     try {
-        // Fetch the event
-        const event = await Event.findById(eventId) as EventDocument | null;
+        // Check if the event exists
+        const event = await Event.findById(eventId);
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
             return;
         }
 
-        // Find the index of the comment
-        const commentIndex = event.comments.findIndex((c) => c._id.toString() === commentId);
-        if (commentIndex === -1) {
+        // Fetch the comment
+        const comment = await Comment.findById(commentId);
+        if (!comment) {
             res.status(404).json({ message: 'Comment not found' });
             return;
         }
 
+        // Check if the comment belongs to the specified event
+        if (comment.eventId.toString() !== eventId) {
+            res.status(400).json({ message: 'Comment does not belong to this event' });
+            return;
+        }
+
         // Authorization check
-        if (event.comments[commentIndex].user.toString() !== userId) {
+        if (comment.user.toString() !== userId) {
             res.status(403).json({ message: 'You are not authorized to delete this comment' });
             return;
         }
 
-        // Remove the comment from the array
-        event.comments.splice(commentIndex, 1);
+        // Delete the comment
+        await Comment.findByIdAndDelete(commentId);
 
-        // Save the updated event
-        await event.save();
-        res.status(200).json({ message: 'Comment deleted successfully', event });
+        res.status(200).json({ message: 'Comment deleted successfully' });
     } catch (err: any) {
         res.status(500).json({ message: 'Error deleting comment', error: err.message });
     }
 };
 
-//TODO: deal with available sits
-//TODO: add number of sits booked by one user
-const bookEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
-    const eventId = req.params.id;
+const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
+    const { eventId } = req.params;
+    const { tickets } = req.body;
     const userId = req.user?.id;
 
     try {
+        // Fetch the event
         const event = await Event.findById(eventId);
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
-        } else if (event.availableSeats <= 0) {
-            res.status(400).json({ message: 'No available seats left' });
-        } else {
-            event.whoBooked.push(new mongoose.Types.ObjectId(userId));
-            event.availableSeats -= 1;
-            await event.save();
-            res.status(200).json({ message: 'Event booked successfully', event });
+            return;
         }
+
+        // Check if there are enough seats available
+        if (event.availableSeats < tickets) {
+            res.status(400).json({ message: 'Not enough seats available' });
+            return;
+        }
+
+        // Create the booking
+        const booking = new Booking({
+            event: eventId,
+            user: userId,
+            tickets,
+        });
+        await booking.save();
+
+        // Update the available seats
+        event.availableSeats -= tickets;
+        await event.save();
+
+        res.status(201).json({ message: 'Booking created successfully', booking });
     } catch (err: any) {
-        res.status(500).json({ message: 'Error booking event', error: err.message });
+        res.status(500).json({ message: 'Error creating booking', error: err.message });
     }
 };
 
-
 const getBookedUsers: RequestHandler = async (req: Request, res: Response): Promise<void> => {
     try {
-        const event = await Event.findById(req.params.id)
-            .populate('whoBooked', 'name email') // Populate with user details
-            .exec();
-
+        // Check if the event exists
+        const event = await Event.findById(req.params.id).exec();
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        // Fetch bookings related to the event
+        const bookings = await Booking.find({ event: req.params.id })
+            .populate('user', 'name email') // Populate user details
+            .exec();
+
+        if (!bookings.length) {
+            res.status(404).json({ message: 'No bookings found for this event' });
         } else {
-            res.status(200).json(event.whoBooked); // Return only the booked users
+            // Return the list of booked users
+            const bookedUsers = bookings.map((booking) => booking.user);
+            res.status(200).json(bookedUsers);
         }
     } catch (err: any) {
         res.status(500).json({ message: 'Error fetching booked users', error: err.message });
@@ -231,7 +269,7 @@ const getBookedUsers: RequestHandler = async (req: Request, res: Response): Prom
 
 const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     const eventId = req.params.id;
-    const userId = new mongoose.Types.ObjectId(req.user?.id);
+    const userId = new mongoose.Schema.Types.ObjectId(req.user?.id!);
 
     try {
         const event = await Event.findById(eventId);
@@ -259,7 +297,50 @@ const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): P
     }
 };
 
+const changeEventStatus = async (eventId: string, status: EventStatus, res: Response) => {
+    try {
+        const event = await Event.findById(eventId);
 
+        if (!event) {
+            res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        // Update the event's status
+        event.eventStatus = status;
+        await event.save();
+
+        res.status(200).json({ message: `Event status updated to ${status}`, event });
+    } catch (err: any) {
+        res.status(500).json({ message: 'Error updating event status', error: err.message });
+    }
+};
+
+// Verify Event Handler
+export const verifyEvent: RequestHandler = async (req: UserRequest, res: Response) => {
+    const eventId = req.params.id;
+    const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+
+    if (!userIsAdmin) {
+        res.status(403).json({ message: 'You are not authorized to verify events' });
+        return;
+    }
+
+    await changeEventStatus(eventId, 'VERIFIED', res);
+};
+
+// Decline Event Handler
+export const declineEvent: RequestHandler = async (req: UserRequest, res: Response) => {
+    const eventId = req.params.id;
+    const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+
+    if (!userIsAdmin) {
+        res.status(403).json({ message: 'You are not authorized to decline events' });
+        return;
+    }
+
+    await changeEventStatus(eventId, 'DECLINED', res);
+};
 
 export default {
     getAllEvents,
@@ -271,5 +352,7 @@ export default {
     deleteEvent,
     getBookedUsers,
     deleteBooking,
-    deleteComment
+    deleteComment,
+    verifyEvent,
+    declineEvent
 };

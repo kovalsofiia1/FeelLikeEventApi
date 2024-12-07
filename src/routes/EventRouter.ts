@@ -1,12 +1,10 @@
 import eventController from "controllers/EventController";
 import express from "express";
 import validateBody from "helpers/validateBody";
-// import eventController from '../controllers/eventController';
 import authMiddleware from "middleware/auth";
 import { bookingSchema, commentSchema, eventSchema } from "schemas/eventSchema";
 
 const router = express.Router();
-
 
 //Events CRUD
 router.get('/', eventController.getAllEvents);
@@ -21,11 +19,13 @@ router.post('/:id/comment', authMiddleware, validateBody(commentSchema), eventCo
 router.delete('/:eventId/comment/:commentId', authMiddleware, eventController.addComment);
 
 //Bookings
-router.post('/:id/book', authMiddleware, validateBody(bookingSchema), eventController.bookEvent);
+router.post('/:id/book', authMiddleware, eventController.bookEvent);
 router.delete('/:id/book', authMiddleware, eventController.deleteBooking);
 router.get('/:id/booked-users', authMiddleware, eventController.getBookedUsers);
 
-
+//VERIFYING EVENTS FOR ADMIN
+router.patch('/:id/verify', authMiddleware, eventController.verifyEvent);
+router.patch('/:id/decline', authMiddleware, eventController.verifyEvent);
 
 
 export { router as EventRouter };
