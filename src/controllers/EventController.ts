@@ -3,8 +3,8 @@ import Event, { EventStatus } from "../models/Event";
 import { EventDocument } from 'types/events/EventTypes';
 import mongoose from 'mongoose';
 import { isDataURI } from 'class-validator';
-import Comment from 'models/Comment';
-import Booking from 'models/Booking';
+import { Comment } from 'models/Comment';
+import { Booking } from 'models/Booking';
 
 interface UserRequest extends Request {
     user?: {
@@ -190,7 +190,7 @@ const deleteComment: RequestHandler = async (req: UserRequest, res: Response) =>
         }
 
         // Authorization check
-        if (comment.user.toString() !== userId) {
+        if (comment.userId.toString() !== userId) {
             res.status(403).json({ message: 'You are not authorized to delete this comment' });
             return;
         }
@@ -252,14 +252,14 @@ const getBookedUsers: RequestHandler = async (req: Request, res: Response): Prom
 
         // Fetch bookings related to the event
         const bookings = await Booking.find({ event: req.params.id })
-            .populate('user', 'name email') // Populate user details
+            .populate('userId', 'name email') // Populate user details
             .exec();
 
         if (!bookings.length) {
             res.status(404).json({ message: 'No bookings found for this event' });
         } else {
             // Return the list of booked users
-            const bookedUsers = bookings.map((booking) => booking.user);
+            const bookedUsers = bookings.map((booking) => booking.userId);
             res.status(200).json(bookedUsers);
         }
     } catch (err: any) {
