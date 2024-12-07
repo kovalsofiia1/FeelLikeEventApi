@@ -24,6 +24,6 @@ router.get('/:userId', getOtherUserData);
 router.put('/me', authMiddleware, updateProfile);
 
 // Change another user's status (Admin only)
-router.put('/:userId/status', authMiddleware, changeUserStatus);
+router.patch('/:userId/status', authMiddleware, changeUserStatus);
 
 export default router;

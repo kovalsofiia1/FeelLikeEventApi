@@ -5,6 +5,8 @@ import cors from "cors";
 import "./db/db";
 import AuthRoutes from './routes/AuthRouter';
 import { EventRouter } from "routes/EventRouter";
+import EventTagRouter from "routes/EventTagRouter";
+import UserRouter from "routes/UserRouter";
 
 
 const app = express();
@@ -15,6 +17,8 @@ app.use(express.json());
 
 app.use('/auth', AuthRoutes);
 app.use('/events', EventRouter);
+app.use('/tags', EventTagRouter);
+app.use('/user', UserRouter);
 
 app.use((_, res) => {
     res.status(404).json({ message: 'Route not found' });

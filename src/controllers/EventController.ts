@@ -89,7 +89,7 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
 
     const { name, description, tags, startDate, endDate, location, images, totalSeats, price, customFields } = req.body;
     const userId = req.user?.id;
-    const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+    const userIsAdmin = req.user?.status === 'ADMIN';
 
     try {
 
@@ -100,8 +100,9 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             return;
         }
 
-        if (event.createdBy!.toString() !== userId || !userIsAdmin) {
-            res.status(403).json({ message: 'You are not authorized to delete this event' });
+        console.log(req.user);
+        if (event.createdBy!.toString() !== userId && !userIsAdmin) {
+            res.status(403).json({ message: 'You are not authorized to update this event' });
             return;
         }
 
@@ -114,7 +115,6 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
         if (tags && tags.length > 0) {
             // Fetch all tags from the database
             const existingTags = await EventTag.find({ '_id': { $in: tags } });
-
             // Check if all tags in the request exist in the database
             if (existingTags.length !== tags.length) {
                 res.status(400).json({ message: 'One or more tags do not exist in the database' });
@@ -123,7 +123,7 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
         }
 
 
-        await Event.findByIdAndUpdate(req.params.id, {
+        const updated = await Event.findByIdAndUpdate(req.params.id, {
             name,
             description,
             tags,
@@ -137,7 +137,7 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
         }, { new: true });
 
 
-        res.status(200).json({ message: 'Event updated successfully', event });
+        res.status(200).json({ message: 'Event updated successfully', updated });
 
     } catch (err: any) {
         res.status(500).json({ message: 'Error updating event', error: err.message });
@@ -168,6 +168,26 @@ const deleteEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
     }
 };
 
+const getComments: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
+    const eventId = req.params.id;
+    try {
+        const event = await Event.findById(eventId);
+        if (!event) {
+            res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        const comments = await Comment.find()
+            .populate('userId', 'name email avatarURL')
+            .exec();
+        res.status(200).json(comments);
+
+    } catch (err) {
+        res.status(500).json({ message: 'Error fetching comments', error: err.message });
+    }
+}
+
+
 const addComment: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     const eventId = req.params.id;
     const { text } = req.body;
@@ -183,18 +203,18 @@ const addComment: RequestHandler = async (req: UserRequest, res: Response): Prom
                 eventId,
             });
             await comment.save();
-            res.status(200).json({ message: 'Comment added successfully', event });
+            res.status(200).json({ message: 'Comment added successfully', comment });
         }
     } catch (err: any) {
         res.status(500).json({ message: 'Error adding comment', error: err.message });
     }
 };
 
-
 const deleteComment: RequestHandler = async (req: UserRequest, res: Response) => {
     const { eventId, commentId } = req.params;
     const userId = req.user?.id;
 
+    console.log(eventId, commentId)
     try {
         // Check if the event exists
         const event = await Event.findById(eventId);
@@ -382,5 +402,6 @@ export default {
     deleteBooking,
     deleteComment,
     verifyEvent,
-    declineEvent
+    declineEvent,
+    getComments
 };

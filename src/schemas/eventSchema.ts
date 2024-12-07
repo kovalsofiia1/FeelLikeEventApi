@@ -8,8 +8,7 @@ export const eventSchema = Joi.object({
   endDate: Joi.date().iso().greater(Joi.ref('startDate')).required(),  // End date must be after start date
   location: Joi.string().min(3).required(),  // Location (required, min 3 chars)
   images: Joi.array().items(Joi.string().uri()).optional(),  // Array of image URLs (optional)
-  totalSeats: Joi.number().integer().min(1).required(),  // Total number of seats (required, at least 1)
-  availableSeats: Joi.number().integer().min(0).required(),  // Available seats (required, cannot be negative)
+  totalSeats: Joi.number().integer().min(1).required(),  // Total number of seats (required, at least 1) 
   price: Joi.number().greater(0).required(),  // Price (required, must be greater than 0)
   customFields: Joi.object().optional(),  // Custom fields (optional, flexible object)
   tags: Joi.array().items(Joi.string().hex().length(24)).optional(),  // Tags (array of ObjectIds, optional)

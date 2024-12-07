@@ -14,13 +14,14 @@ export const addEventTag: RequestHandler = async (req: Request, res: Response): 
   try {
     const { name } = req.body;
 
+    const lowerCaseName = name.toLowerCase();
     // Check if interest already exists
-    const existingInterest = await EventTag.findOne({ name });
+    const existingInterest = await EventTag.findOne({ name: lowerCaseName });
     if (existingInterest) {
       return res.status(400).json({ message: 'Interest already exists' });
     }
 
-    const interest = new EventTag({ name });
+    const interest = new EventTag({ name: lowerCaseName });
     await interest.save();
     return res.status(201).json(interest);
   } catch (error) {
@@ -56,13 +57,14 @@ export const getEventTagById: RequestHandler = async (req: Request, res: Respons
 export const updateTag: RequestHandler = async (req: UserRequest, res: Response): Promise<any> => {
   try {
     const { name } = req.body;
+    const lowerCaseName = name.toLowerCase();
     const user = req.user;
     if (user?.status !== 'ADMIN') {
       return res.status(401).json({ message: 'Not allowed action!' });
     }
     const updatedTag = await EventTag.findByIdAndUpdate(
       req.params.id,
-      { name },
+      { name: lowerCaseName },
       { new: true }
     );
 

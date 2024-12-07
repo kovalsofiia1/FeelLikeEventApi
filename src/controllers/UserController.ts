@@ -63,7 +63,7 @@ export const changeUserStatus = async (req: UserRequest, res: Response, next: Ne
   const { status } = req.body;
 
   if (status && !['ADMIN', 'USER', 'VERIFIED_USER'].includes(status)) {
-    return next(new HttpErrors(400, 'Invalid status'));
+    return next(new HttpErrors(400, "Invalid status: should be either of ['ADMIN', 'USER', 'VERIFIED_USER']"));
   }
 
   try {

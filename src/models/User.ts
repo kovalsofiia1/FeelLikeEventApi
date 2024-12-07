@@ -13,7 +13,7 @@ interface IUser extends Document {
     interests: mongoose.Types.ObjectId[];
     verified: boolean;
     profileDescription?: string,
-    token: string,
+    token?: string,
     comparePassword(password: string): Promise<boolean>;
 }
 
@@ -66,7 +66,7 @@ const userSchema = new mongoose.Schema<IUser>(
         googleId: {
             type: String,
             unique: true,
-            default: null,
+            required: false
         },
 
         verified: {
@@ -75,7 +75,7 @@ const userSchema = new mongoose.Schema<IUser>(
         },
         token: {
             type: String,
-            required: true
+            required: false
         }
     },
     { timestamps: true }
