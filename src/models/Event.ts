@@ -1,61 +1,41 @@
-import mongoose from "mongoose";
+import mongoose, { Document, Schema } from "mongoose";
 
-import { Document, ObjectId } from "mongoose";
-
-// Interface for the comment sub-document
-export interface Comment {
-    user: ObjectId; // Reference to the user who posted the comment
-    text: string;
-    date?: Date; // Optional, defaulted to `Date.now` in schema
-}
-
-// Enum for event status
-export type EventStatus = 'CREATED' | 'VERIFIED' | 'DECLINED';
-
-// Main event interface
-export interface Event extends Document {
+interface IEvent extends Document {
     name: string;
     description: string;
-    eventType: string;
+    tags: mongoose.Types.ObjectId[];
     startDate: Date;
     endDate: Date;
     location: string;
-    address: string;
-    image?: string; // Optional
-    createdBy: ObjectId; // Reference to the user who created the event
-    whoBooked: ObjectId[]; // List of users who booked the event
-    totalSeats: number; // Total number of seats for the event
-    availableSeats: number; // Available seats remaining
-    rating: number; // Range 0-5
-    eventStatus: EventStatus; // Enum for event status
-    customFields?: Map<string, string>; // Optional custom fields
+    createdBy: mongoose.Types.ObjectId;
+    images: string[];
+    totalSeats: number;
+    availableSeats: number;
+    eventStatus: EventStatus;
+    price: number;
+    customFields: Record<string, any>;
 }
 
+export type EventStatus = 'CREATED' | 'VERIFIED' | 'DECLINED';
 
-const eventSchema = new mongoose.Schema<Event>({
+const EventSchema: Schema = new Schema({
     name: { type: String, required: true },
     description: { type: String, required: true },
-    eventType: { type: String, required: true },
+    tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "EventTag" }],
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
-    location: {
-        type: String,
-        required: true
-    },
-    address: { type: String, required: true },
-    image: { type: String },
-    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
-
-    totalSeats: { type: Number, required: true }, // Total seats
-    availableSeats: { type: Number, required: true }, // Available seats
-    rating: { type: Number, min: 0, max: 5, default: 0 },
+    location: { type: String, required: true },
+    createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    images: { type: [String] },
+    totalSeats: { type: Number, required: true },
+    availableSeats: { type: Number, required: true },
     eventStatus: {
         type: String,
         enum: ['CREATED', 'VERIFIED', 'DECLINED'],
-        required: [true, 'Status is required'],
         default: 'CREATED',
     },
-    customFields: { type: Map, of: String }
+    price: { type: Number },
+    customFields: { type: Map, of: Schema.Types.Mixed },
 });
 
-export default mongoose.model('Event', eventSchema);
+export const Event = mongoose.model<IEvent>("Event", EventSchema);

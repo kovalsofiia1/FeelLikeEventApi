@@ -1,5 +1,5 @@
 import { Request, RequestHandler, Response } from 'express';
-import Event, { EventStatus } from "../models/Event";
+import { Event, EventStatus } from "../models/Event";
 import { EventDocument } from 'types/events/EventTypes';
 import mongoose from 'mongoose';
 import { isDataURI } from 'class-validator';
@@ -15,7 +15,7 @@ interface UserRequest extends Request {
 }
 
 const createEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
-    const { name, description, eventType, startDate, endDate, location, address, image, totalSeats, rating, customFields } = req.body;
+    const { name, description, tags, startDate, endDate, location, images, totalSeats, price, customFields } = req.body;
 
     const userId = req.user?.id;
     const isUserVerified = req.user?.status === 'VERIFIED_USER';
@@ -23,15 +23,13 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
         const newEvent = new Event({
             name,
             description,
-            eventType,
+            tags,
             startDate,
             endDate,
             location,
-            address,
-            image,
+            images,
             availableSeats: totalSeats,
             totalSeats,
-            rating,
             customFields,
             createdBy: userId,
             eventStatus: isUserVerified ? 'VERIFIED' : 'CREATED'
@@ -46,10 +44,7 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
 
 const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     try {
-        const events = await Event.find()
-            // .populate('whoBooked', 'name email')
-            // .populate('comments.user', 'name email')
-            .exec();
+        const events = await Event.find().exec();
 
         res.status(200).json(events);
 
@@ -60,10 +55,7 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 
 const getEventById: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     try {
-        const event = await Event.findById(req.params.id)
-            // .populate('whoBooked', 'name email')
-            // .populate('comments.user', 'name email')
-            .exec();
+        const event = await Event.findById(req.params.id).exec();
 
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
@@ -77,7 +69,7 @@ const getEventById: RequestHandler = async (req: UserRequest, res: Response): Pr
 
 const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
 
-    const { name, description, eventType, startDate, endDate, location, address, image, totalSeats, rating, customFields } = req.body;
+    const { name, description, tags, startDate, endDate, location, images, totalSeats, price, customFields } = req.body;
     const userId = req.user?.id;
     const userIsAdmin = req.user?.status === 'VERIFIED_USER';
 
@@ -98,15 +90,14 @@ const updateEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
         await Event.findByIdAndUpdate(req.params.id, {
             name,
             description,
-            eventType,
+            tags,
             startDate,
             endDate,
             location,
-            address,
-            image,
+            images,
+            availableSeats: (event.availableSeats < event.totalSeats ? event.availableSeats : totalSeats),
             totalSeats,
-            rating,
-            customFields
+            customFields,
         }, { new: true });
 
 
@@ -121,7 +112,7 @@ const deleteEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
     try {
 
         const userId = req.user?.id;
-        const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+        const userIsAdmin = req.user?.status === 'ADMIN';
         const event = await Event.findById(req.params.id);
 
         if (!event) {
@@ -151,7 +142,7 @@ const addComment: RequestHandler = async (req: UserRequest, res: Response): Prom
             res.status(404).json({ message: 'Event not found' });
         } else {
             const comment = new Comment({
-                user: userId,
+                userId,
                 text,
                 eventId,
             });
@@ -225,8 +216,8 @@ const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
 
         // Create the booking
         const booking = new Booking({
-            event: eventId,
-            user: userId,
+            eventId,
+            userId,
             tickets,
         });
         await booking.save();
@@ -251,7 +242,7 @@ const getBookedUsers: RequestHandler = async (req: Request, res: Response): Prom
         }
 
         // Fetch bookings related to the event
-        const bookings = await Booking.find({ event: req.params.id })
+        const bookings = await Booking.find({ eventId: req.params.id })
             .populate('userId', 'name email') // Populate user details
             .exec();
 
@@ -267,27 +258,27 @@ const getBookedUsers: RequestHandler = async (req: Request, res: Response): Prom
     }
 };
 
-const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
-    const eventId = req.params.id;
-    const userId = new mongoose.Schema.Types.ObjectId(req.user?.id!);
+const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): Promise<any> => {
+    const eventId = req.params.eventId;
+    const userId = new mongoose.Schema.Types.ObjectId(req.user?.id!);  // User ID from request (assumed to be added by auth middleware)
 
     try {
+        // Find the booking record for the user and event
+        const booking = await Booking.findOne({ eventId, userId });
+
+        if (!booking) {
+            return res.status(400).json({ message: 'Booking not found for this user and event' });
+        }
+
+        // Find the event and update available seats
         const event = await Event.findById(eventId);
-
         if (!event) {
-            res.status(404).json({ message: 'Event not found' });
-            return;
+            return res.status(404).json({ message: 'Event not found' });
         }
+        // Delete the booking
+        await Booking.deleteOne({ _id: booking._id });
 
-        // Check if the user exists in the whoBooked array
-        if (!event.whoBooked.includes(userId)) {
-            res.status(400).json({ message: 'User has not booked this event' });
-            return;
-        }
-
-        event.whoBooked = event.whoBooked.filter((bookingUserId) => bookingUserId.toString() !== userId.toString());
-
-        event.availableSeats += 1;
+        event.availableSeats += booking.tickets;
 
         await event.save();
 
@@ -296,6 +287,7 @@ const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): P
         res.status(500).json({ message: 'Error deleting booking', error: err.message });
     }
 };
+
 
 const changeEventStatus = async (eventId: string, status: EventStatus, res: Response) => {
     try {
@@ -319,7 +311,7 @@ const changeEventStatus = async (eventId: string, status: EventStatus, res: Resp
 // Verify Event Handler
 export const verifyEvent: RequestHandler = async (req: UserRequest, res: Response) => {
     const eventId = req.params.id;
-    const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+    const userIsAdmin = req.user?.status === 'ADMIN';
 
     if (!userIsAdmin) {
         res.status(403).json({ message: 'You are not authorized to verify events' });
@@ -332,7 +324,7 @@ export const verifyEvent: RequestHandler = async (req: UserRequest, res: Respons
 // Decline Event Handler
 export const declineEvent: RequestHandler = async (req: UserRequest, res: Response) => {
     const eventId = req.params.id;
-    const userIsAdmin = req.user?.status === 'VERIFIED_USER';
+    const userIsAdmin = req.user?.status === 'ADMIN';
 
     if (!userIsAdmin) {
         res.status(403).json({ message: 'You are not authorized to decline events' });
