@@ -51,7 +51,7 @@ const deleteLike: RequestHandler = async (req: UserRequest, res: Response): Prom
       return;
     }
 
-    res.status(204);
+    res.status(204).send();
   } catch (err: any) {
     res.status(500).json({ message: 'Error removing like', error: err.message });
   }

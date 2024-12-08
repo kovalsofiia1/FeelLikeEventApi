@@ -52,7 +52,7 @@ const unsaveEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
       return;
     }
 
-    res.status(204);
+    res.status(204).send();
   } catch (err: any) {
     res.status(500).json({ message: 'Error unsaving event', error: err.message });
   }
