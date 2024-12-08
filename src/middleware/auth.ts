@@ -35,4 +35,39 @@ const authMiddleware = async (req, _, next) => {
     }
 };
 
+export const notStrictAuthMiddleware = async (req, _, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        next();
+        return;
+    }
+
+    const [bearer, token] = authHeader.split(' ');
+    if (bearer !== 'Bearer' || !token) {
+        next();
+        return;
+    }
+
+    try {
+        const decoded = verifyToken(token);
+        const user = await User.findById(decoded.id);
+
+        if (!user || user.token !== token) {
+            next();
+            return;
+        }
+
+        // Add user details to the request object
+        req.user = {
+            id: user._id?.toString(),
+            email: user.email,
+            status: user.status,
+        };
+
+        next();
+    } catch (error) {
+        next(error);
+    }
+};
+
 export default authMiddleware;

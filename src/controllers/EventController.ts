@@ -1,11 +1,11 @@
 import { Request, RequestHandler, Response } from 'express';
 import { Event, EventStatus } from "../models/Event";
-import { EventDocument } from 'types/events/EventTypes';
 import mongoose from 'mongoose';
-import { isDataURI } from 'class-validator';
 import { Comment } from 'models/Comment';
 import { Booking } from 'models/Booking';
 import { EventTag } from 'models/EventTag';
+import { Like } from 'models/Like';
+import { Bookmark } from 'models/Bookmark';
 
 interface UserRequest extends Request {
     user?: {
@@ -62,9 +62,34 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
 
 const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     try {
+        const userId = req.user?.id;
+
+        // Fetch all events
         const events = await Event.find().exec();
 
-        res.status(200).json(events);
+        // Check if the user is logged in
+        if (userId) {
+            console.log(userId)
+            // Fetch liked and saved event IDs for the user
+            const likedEvents = await Like.find({ userId }).select('eventId').lean();
+            const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
+
+            // Extract event IDs from the liked and saved documents
+            const likedEventIds = likedEvents.map((like) => like.eventId.toString());
+            const savedEventIds = savedEvents.map((save) => save.eventId.toString());
+
+            // Add liked and saved flags to each event
+            const updatedEvents = events.map((event) => ({
+                ...event.toObject(),
+                isLiked: likedEventIds.includes(event._id.toString()),
+                isSaved: savedEventIds.includes(event._id.toString()),
+            }));
+
+            res.status(200).json(updatedEvents);
+        } else {
+            // If the user is not logged in, return events without modifications
+            res.status(200).json(events);
+        }
 
     } catch (err: any) {
         res.status(500).json({ message: 'Error fetching event', error: err.message });
@@ -72,14 +97,33 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 }
 
 const getEventById: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
+    const userId = req.user?.id;
     try {
         const event = await Event.findById(req.params.id).exec();
 
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        // Check if the user is logged in
+        if (userId) {
+            console.log(userId)
+            // Fetch liked and saved event IDs for the user
+            const like = await Like.findOne({ userId, eventId: event._id }).exec();
+            const bookmark = await Bookmark.findOne({ userId, eventId: event._id }).exec();
+
+            const updatedEvent = {
+                ...event.toObject(),
+                isLiked: !!like,
+                isSaved: !!bookmark
+            }
+            res.status(200).json(updatedEvent);
         } else {
+            // If the user is not logged in, return events without modifications
             res.status(200).json(event);
         }
+
     } catch (err: any) {
         res.status(500).json({ message: 'Error fetching event', error: err.message });
     }
@@ -187,7 +231,6 @@ const getComments: RequestHandler = async (req: UserRequest, res: Response): Pro
     }
 }
 
-
 const addComment: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     const eventId = req.params.id;
     const { text } = req.body;
@@ -252,13 +295,13 @@ const deleteComment: RequestHandler = async (req: UserRequest, res: Response) =>
 };
 
 const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
-    const { eventId } = req.params;
-    const { tickets } = req.body;
+    const { id } = req.params;
+    const tickets = req.body.tickets || 1;
     const userId = req.user?.id;
 
     try {
         // Fetch the event
-        const event = await Event.findById(eventId);
+        const event = await Event.findById(id);
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
             return;
@@ -272,7 +315,7 @@ const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
 
         // Create the booking
         const booking = new Booking({
-            eventId,
+            eventId: id,
             userId,
             tickets,
         });
@@ -288,7 +331,9 @@ const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
     }
 };
 
-const getBookedUsers: RequestHandler = async (req: Request, res: Response): Promise<void> => {
+const getBookedUsers: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
+    const user = req.user;
+
     try {
         // Check if the event exists
         const event = await Event.findById(req.params.id).exec();
@@ -297,26 +342,27 @@ const getBookedUsers: RequestHandler = async (req: Request, res: Response): Prom
             return;
         }
 
+        // Authorization check
+        if (event.createdBy.toString() !== user?.id && user?.status !== 'ADMIN') {
+            res.status(403).json({ message: 'You are not authorized to get users who booked this event!' });
+            return;
+        }
+
         // Fetch bookings related to the event
         const bookings = await Booking.find({ eventId: req.params.id })
-            .populate('userId', 'name email') // Populate user details
+            .populate('userId', 'name email avatarURL') // Populate user details
             .exec();
 
-        if (!bookings.length) {
-            res.status(404).json({ message: 'No bookings found for this event' });
-        } else {
-            // Return the list of booked users
-            const bookedUsers = bookings.map((booking) => booking.userId);
-            res.status(200).json(bookedUsers);
-        }
+        const bookedUsers = bookings.map((booking) => booking.userId);
+        res.status(200).json(bookings);
     } catch (err: any) {
         res.status(500).json({ message: 'Error fetching booked users', error: err.message });
     }
 };
 
 const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): Promise<any> => {
-    const eventId = req.params.eventId;
-    const userId = new mongoose.Schema.Types.ObjectId(req.user?.id!);  // User ID from request (assumed to be added by auth middleware)
+    const eventId = req.params.id;
+    const userId = new mongoose.Types.ObjectId(req.user?.id!);
 
     try {
         // Find the booking record for the user and event
@@ -343,7 +389,6 @@ const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): P
         res.status(500).json({ message: 'Error deleting booking', error: err.message });
     }
 };
-
 
 const changeEventStatus = async (eventId: string, status: EventStatus, res: Response) => {
     try {

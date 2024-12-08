@@ -1,6 +1,7 @@
 import mongoose, { Document, Schema } from "mongoose";
 
 interface IEvent extends Document {
+    _id: mongoose.Types.ObjectId;
     name: string;
     description: string;
     tags: mongoose.Types.ObjectId[];

@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import User from '../models/User';
 import HttpErrors from '../helpers/HttpErrors';
+import { EventTag } from 'models/EventTag';
 
 interface UserRequest extends Request {
   user?: {
@@ -38,12 +39,29 @@ export const getOtherUserData = async (req: UserRequest, res: Response, next: Ne
 
 // Update the current user's profile
 export const updateProfile = async (req: UserRequest, res: Response, next: NextFunction) => {
-  const { name, email, profileDescription, avatarURL } = req.body;
+  const { name, email, profileDescription, avatarURL, interests } = req.body;
 
   try {
+
+    if (interests && !Array.isArray(interests)) {
+      res.status(400).json({ message: 'Tags must be an array' });
+      return;
+    }
+
+    // Check if tags are provided in the request
+    if (interests && interests.length > 0) {
+      // Fetch all tags from the database
+      const existingTags = await EventTag.find({ '_id': { $in: interests } });
+      // Check if all tags in the request exist in the database
+      if (existingTags.length !== interests.length) {
+        res.status(400).json({ message: 'One or more interests do not exist in the database' });
+        return;
+      }
+    }
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user?.id,
-      { name, email, profileDescription, avatarURL },
+      { name, email, profileDescription, avatarURL, interests },
       { new: true, runValidators: true } // Return updated document and run validations
     ).select('-password -token -googleId -verified'); // Exclude password from response
 

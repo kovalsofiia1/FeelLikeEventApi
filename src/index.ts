@@ -7,6 +7,8 @@ import AuthRoutes from './routes/AuthRouter';
 import { EventRouter } from "routes/EventRouter";
 import EventTagRouter from "routes/EventTagRouter";
 import UserRouter from "routes/UserRouter";
+import { LikeRouter } from "routes/LikeRouter";
+import { BookmarkRouter } from "routes/BookmarkRouter";
 
 
 const app = express();
@@ -19,6 +21,9 @@ app.use('/auth', AuthRoutes);
 app.use('/events', EventRouter);
 app.use('/tags', EventTagRouter);
 app.use('/user', UserRouter);
+app.use('/like', LikeRouter);
+app.use('/bookmark', BookmarkRouter);
+
 
 app.use((_, res) => {
     res.status(404).json({ message: 'Route not found' });

@@ -1,15 +1,15 @@
 import eventController from "controllers/EventController";
 import express from "express";
 import validateBody from "helpers/validateBody";
-import authMiddleware from "middleware/auth";
+import authMiddleware, { notStrictAuthMiddleware } from "middleware/auth";
 import { bookingSchema, commentSchema, eventSchema } from "schemas/eventSchema";
 
 const router = express.Router();
 
 //Events CRUD
-router.get('/', eventController.getAllEvents);
+router.get('/', notStrictAuthMiddleware, eventController.getAllEvents);
 router.post('/', authMiddleware, validateBody(eventSchema), eventController.createEvent);
-router.get('/:id', eventController.getEventById);
+router.get('/:id', notStrictAuthMiddleware, eventController.getEventById);
 router.put('/:id', authMiddleware, validateBody(eventSchema), eventController.updateEvent);
 router.delete('/:id', authMiddleware, eventController.deleteEvent);
 
