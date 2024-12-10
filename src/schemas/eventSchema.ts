@@ -1,4 +1,4 @@
-import { PHONE_PATTERN } from 'helpers/constants';
+import { PHONE_PATTERN } from '../helpers/constants';
 import Joi from 'joi';
 
 // Define the eventSchema based on your Mongoose model
