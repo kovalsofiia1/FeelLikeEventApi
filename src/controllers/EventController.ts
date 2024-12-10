@@ -65,7 +65,9 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
         const userId = req.user?.id;
 
         // Fetch all events
-        const events = await Event.find().exec();
+        const events = await Event.find()
+            .populate('createdBy', '_id name avatarURL')
+            .exec();
 
         // Check if the user is logged in
         if (userId) {
@@ -99,7 +101,10 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 const getEventById: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     const userId = req.user?.id;
     try {
-        const event = await Event.findById(req.params.id).exec();
+        const event = await Event.findById(req.params.id)
+            .populate('createdBy', '_id name avatarURL')
+            .populate('tags', '_id name')
+            .exec();
 
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
@@ -108,15 +113,18 @@ const getEventById: RequestHandler = async (req: UserRequest, res: Response): Pr
 
         // Check if the user is logged in
         if (userId) {
-            console.log(userId)
             // Fetch liked and saved event IDs for the user
             const like = await Like.findOne({ userId, eventId: event._id }).exec();
             const bookmark = await Bookmark.findOne({ userId, eventId: event._id }).exec();
-
+            const booking = await Booking.findOne({ userId, eventId: event._id }).exec();
             const updatedEvent = {
                 ...event.toObject(),
                 isLiked: !!like,
-                isSaved: !!bookmark
+                isSaved: !!bookmark,
+                booking: booking && {
+                    bookingId: booking._id,
+                    tickets: booking.tickets
+                }
             }
             res.status(200).json(updatedEvent);
         } else {

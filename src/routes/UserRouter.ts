@@ -1,18 +1,11 @@
 import AuthController from "controllers/AuthController";
 import { getMyData, getOtherUserData, updateProfile, changeUserStatus } from "controllers/UserController";
 import express from "express";
-import validateBody from "helpers/validateBody";
+// import validateBody from "helpers/validateBody";
 import authMiddleware from "middleware/auth";
-import { profileSchema } from "schemas/userSchemas";
+// import { profileSchema } from "schemas/userSchemas";
 
 const router = express.Router();
-
-router.patch(
-  '/',
-  authMiddleware,
-  validateBody(profileSchema),
-  AuthController.updateProfile
-);
 
 // Get logged-in user's data
 router.get('/me', authMiddleware, getMyData);

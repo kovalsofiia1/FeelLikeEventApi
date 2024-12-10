@@ -19,6 +19,7 @@ export const getMyData: RequestHandler = async (req: UserRequest, res: Response,
     }
     res.status(200).json(user);
   } catch (error) {
+    console.log(error)
     next(error);
   }
 };
