@@ -7,7 +7,7 @@
   "license": "ISC",
   "description": "",
   "scripts": {
-    "start": "node -r tsconfig-paths/register dist/index.js",
+    "start": "node dist/index.js",
     "dev": "nodemon -r tsconfig-paths/register src/index.ts",
     "build": "tsc -p tsconfig.json",
     "postinstall": "tsc -p tsconfig.json"
