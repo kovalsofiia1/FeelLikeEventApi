@@ -1,7 +1,6 @@
-import jwt from 'jsonwebtoken';
 import User from '../models/User';
 import HttpErrors from '../helpers/HttpErrors';
-import { verifyToken } from 'utils/jwtUtils';
+import { verifyToken } from '../utils/jwtUtils';
 
 const authMiddleware = async (req, _, next) => {
     const authHeader = req.headers.authorization;

@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction, RequestHandler } from 'express';
 import User from '../models/User';
 import HttpErrors from '../helpers/HttpErrors';
-import { EventTag } from 'models/EventTag';
+import { EventTag } from '../models/EventTag';
 
 interface UserRequest extends Request {
   user?: {

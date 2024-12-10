@@ -6,7 +6,7 @@ import {
     emailSchema,
     profileSchema
 } from '../schemas/userSchemas';
-import validateBody from "helpers/validateBody";
+import validateBody from "../helpers/validateBody";
 import authMiddleware from "../middleware/auth";
 
 const router = express.Router();

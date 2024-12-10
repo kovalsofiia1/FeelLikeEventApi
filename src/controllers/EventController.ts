@@ -1,11 +1,11 @@
 import { Request, RequestHandler, Response } from 'express';
 import { Event, EventStatus } from "../models/Event";
 import mongoose from 'mongoose';
-import { Comment } from 'models/Comment';
-import { Booking } from 'models/Booking';
-import { EventTag } from 'models/EventTag';
-import { Like } from 'models/Like';
-import { Bookmark } from 'models/Bookmark';
+import { Comment } from '../models/Comment';
+import { Booking } from '../models/Booking';
+import { EventTag } from '../models/EventTag';
+import { Like } from '../models/Like';
+import { Bookmark } from '../models/Bookmark';
 
 interface UserRequest extends Request {
     user?: {

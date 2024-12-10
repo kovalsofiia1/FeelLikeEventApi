@@ -4,11 +4,11 @@ import morgan from "morgan";
 import cors from "cors";
 import "./db/db";
 import AuthRoutes from './routes/AuthRouter';
-import { EventRouter } from "routes/EventRouter";
-import EventTagRouter from "routes/EventTagRouter";
-import UserRouter from "routes/UserRouter";
-import { LikeRouter } from "routes/LikeRouter";
-import { BookmarkRouter } from "routes/BookmarkRouter";
+import { EventRouter } from "./routes/EventRouter";
+import EventTagRouter from "./routes/EventTagRouter";
+import UserRouter from "./routes/UserRouter";
+import { LikeRouter } from "./routes/LikeRouter";
+import { BookmarkRouter } from "./routes/BookmarkRouter";
 
 
 const app = express();

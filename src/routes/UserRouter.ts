@@ -1,9 +1,8 @@
-import AuthController from "controllers/AuthController";
-import { getMyData, getOtherUserData, updateProfile, changeUserStatus } from "controllers/UserController";
+import { getMyData, getOtherUserData, updateProfile, changeUserStatus } from "../controllers/UserController";
 import express from "express";
-// import validateBody from "helpers/validateBody";
-import authMiddleware from "middleware/auth";
-// import { profileSchema } from "schemas/userSchemas";
+// import validateBody from "../helpers/validateBody";
+import authMiddleware from "../middleware/auth";
+// import { profileSchema } from "../schemas/userSchemas";
 
 const router = express.Router();
 

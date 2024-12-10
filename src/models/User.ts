@@ -1,6 +1,6 @@
 import mongoose, { Document, Model } from 'mongoose';
 import bcrypt from 'bcryptjs';
-import { EMAIL_PATTERN, USERNAME_PATTERN } from 'helpers/constants';
+import { EMAIL_PATTERN, USERNAME_PATTERN } from '../helpers/constants';
 
 
 interface IUser extends Document {

@@ -1,8 +1,8 @@
-import eventController from "controllers/EventController";
+import eventController from "../controllers/EventController";
 import express from "express";
-import validateBody from "helpers/validateBody";
-import authMiddleware, { notStrictAuthMiddleware } from "middleware/auth";
-import { bookingSchema, commentSchema, eventSchema } from "schemas/eventSchema";
+import validateBody from "../helpers/validateBody";
+import authMiddleware, { notStrictAuthMiddleware } from "../middleware/auth";
+import { commentSchema, eventSchema } from "../schemas/eventSchema";
 
 const router = express.Router();
 

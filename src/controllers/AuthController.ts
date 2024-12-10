@@ -1,8 +1,8 @@
 import { Request, RequestHandler, Response } from "express";
 import User from '../models/User';
-import { generateToken } from "utils/jwtUtils";
-import controllerWrapper from "helpers/controllerWrapper";
-import HttpErrors from "helpers/HttpErrors";
+import { generateToken } from "../utils/jwtUtils";
+import controllerWrapper from "../helpers/controllerWrapper";
+import HttpErrors from "../helpers/HttpErrors";
 
 const login: RequestHandler = controllerWrapper(async (req: Request, res: Response): Promise<void> => {
     const { email, password } = req.body;

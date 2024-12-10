@@ -1,6 +1,6 @@
 import { RequestHandler, Response, Request } from "express"
 import { Event } from '../models/Event';
-import { Like } from "models/Like";
+import { Like } from "../models/Like";
 interface UserRequest extends Request {
   user?: {
     id: string,
