@@ -2,7 +2,7 @@ import eventController from "../controllers/EventController";
 import express from "express";
 import validateBody from "../helpers/validateBody";
 import authMiddleware, { notStrictAuthMiddleware } from "../middleware/auth";
-import { commentSchema, eventSchema } from "../schemas/eventSchema";
+import { bookingSchema, commentSchema, eventSchema } from "../schemas/eventSchema";
 
 const router = express.Router();
 
@@ -21,7 +21,7 @@ router.delete('/:eventId/comment/:commentId', authMiddleware, eventController.de
 
 
 //Bookings
-router.post('/:id/book', authMiddleware, eventController.bookEvent);
+router.post('/:id/book', authMiddleware, validateBody(bookingSchema), eventController.bookEvent);
 router.delete('/:id/book', authMiddleware, eventController.deleteBooking);
 router.get('/:id/booked-users', authMiddleware, eventController.getBookedUsers);
 

@@ -306,12 +306,20 @@ const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
     const { id } = req.params;
     const tickets = req.body.tickets || 1;
     const userId = req.user?.id;
+    const additionalInformation = req.body.additionalInformation;
 
     try {
         // Fetch the event
         const event = await Event.findById(id);
         if (!event) {
             res.status(404).json({ message: 'Event not found' });
+            return;
+        }
+
+        const exBooking = await Booking.findOne({ eventId: id, userId })
+
+        if (exBooking) {
+            res.status(400).json({ message: 'You have already booked this event' });
             return;
         }
 
@@ -326,6 +334,7 @@ const bookEvent: RequestHandler = async (req: UserRequest, res: Response) => {
             eventId: id,
             userId,
             tickets,
+            additionalInformation
         });
         await booking.save();
 

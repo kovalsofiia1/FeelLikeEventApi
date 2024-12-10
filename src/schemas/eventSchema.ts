@@ -1,3 +1,4 @@
+import { PHONE_PATTERN } from 'helpers/constants';
 import Joi from 'joi';
 
 // Define the eventSchema based on your Mongoose model
@@ -19,5 +20,11 @@ export const commentSchema = Joi.object({
 });
 
 export const bookingSchema = Joi.object({
-  eventId: Joi.string().hex().length(24).required(),  // Event ID for booking (required, must be valid ObjectId)
+  tickets: Joi.number().integer().min(1).required(),
+  additionalInformation: Joi.object({
+    name: Joi.string().optional(),
+    phoneNumber: Joi.string().pattern(PHONE_PATTERN).required(),
+    comment: Joi.string().optional(),
+  }).required(),
+  bookedAt: Joi.date().default(Date.now),
 });
