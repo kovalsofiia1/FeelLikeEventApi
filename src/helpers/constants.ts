@@ -8,3 +8,5 @@ export const NAME_PATTERN =
     /^[a-zA-Z0-9!@#$%^&*()_+={}\[\]:;"'<>,.?\/\\|`~\-\sА-Яа-яЄєІіЇїҐґ]{2,32}$/;
 
 export const CLOUD_STORAGE = 'https://storage.cloud.google.com/';
+
+export const URL_PATTERN = /^(https?|ftp):\/\/[^\s/$.?#].[^\s]*$/i;

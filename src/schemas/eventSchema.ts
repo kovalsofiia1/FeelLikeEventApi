@@ -1,4 +1,4 @@
-import { PHONE_PATTERN } from '../helpers/constants';
+import { PHONE_PATTERN, URL_PATTERN } from '../helpers/constants';
 import Joi from 'joi';
 
 // Define the eventSchema based on your Mongoose model
@@ -7,8 +7,8 @@ export const eventSchema = Joi.object({
   description: Joi.string().min(10).required(), // Description of the event (required, min 10 chars)
   startDate: Joi.date().iso().required(), // Start date in ISO format (required)
   endDate: Joi.date().iso().greater(Joi.ref('startDate')).required(), // End date must be after start date
-  isOnline: Joi.string().uri().optional(),
-  location: Joi.string().required(), // Location is now an object (required)
+  isOnline: Joi.string().pattern(URL_PATTERN).optional(),
+  location: Joi.string().optional(), // Location is now an object (required)
   totalSeats: Joi.number().integer().min(1).required(), // Total number of seats (required, at least 1)
   price: Joi.number().greater(0).required(), // Price (required, must be greater than 0)
   customFields: Joi.object().optional(), // Custom fields (optional, flexible object)

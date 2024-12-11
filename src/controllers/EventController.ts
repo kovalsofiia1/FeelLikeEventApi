@@ -71,7 +71,7 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
     console.log('in controller')
     try {
         const tagsProc = JSON.parse(tags);
-        const locationProc = JSON.parse(location);
+        const locationProc = location ? JSON.parse(location) : '';
 
         if (tagsProc && !Array.isArray(tagsProc)) {
             res.status(400).json({ message: 'Tags must be an array' });
@@ -160,10 +160,10 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
                 isSaved: savedEventIds.includes(event._id.toString()),
             }));
 
-            res.status(200).json(updatedEvents);
+            res.status(200).json(updatedEvents.reverse());
         } else {
             // If the user is not logged in, return events without modifications
-            res.status(200).json(events);
+            res.status(200).json(events.reverse());
         }
 
     } catch (err: any) {
@@ -302,7 +302,7 @@ const getComments: RequestHandler = async (req: UserRequest, res: Response): Pro
             return;
         }
 
-        const comments = await Comment.find()
+        const comments = await Comment.find({ eventId })
             .populate('userId', '_id name email avatarURL')
             .sort({ date: -1 })
             .exec();
