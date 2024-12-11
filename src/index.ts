@@ -9,6 +9,7 @@ import EventTagRouter from "./routes/EventTagRouter";
 import UserRouter from "./routes/UserRouter";
 import { LikeRouter } from "./routes/LikeRouter";
 import { BookmarkRouter } from "./routes/BookmarkRouter";
+import { urlencoded } from "body-parser";
 
 
 const app = express();
@@ -16,6 +17,7 @@ const app = express();
 app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
+app.use(urlencoded({ limit: '50mb' }))
 
 app.use('/auth', AuthRoutes);
 app.use('/events', EventRouter);

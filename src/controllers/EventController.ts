@@ -6,8 +6,11 @@ import { Booking } from '../models/Booking';
 import { EventTag } from '../models/EventTag';
 import { Like } from '../models/Like';
 import { Bookmark } from '../models/Bookmark';
+import { uploadImageToCloudinary } from 'helpers/cloudinary';
+import multer from 'multer';
 
 interface UserRequest extends Request {
+    files: Express.Multer.File[];
     user?: {
         id: string,
         email: string,
@@ -15,42 +18,112 @@ interface UserRequest extends Request {
     }
 }
 
-const createEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
-    const { name, description, tags, startDate, endDate, location, images, totalSeats, price, customFields } = req.body;
+// const createEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
+//     const { name, description, tags, startDate, endDate, location, images, totalSeats, price, customFields } = req.body;
 
+//     const userId = req.user?.id;
+//     const isUserVerified = req.user?.status === 'VERIFIED_USER';
+//     try {
+//         if (tags && !Array.isArray(tags)) {
+//             res.status(400).json({ message: 'Tags must be an array' });
+//             return;
+//         }
+
+//         // Check if tags are provided in the request
+//         if (tags && tags.length > 0) {
+//             // Fetch all tags from the database
+//             const existingTags = await EventTag.find({ '_id': { $in: tags } });
+
+//             // Check if all tags in the request exist in the database
+//             if (existingTags.length !== tags.length) {
+//                 res.status(400).json({ message: 'One or more tags do not exist in the database' });
+//                 return;
+//             }
+//         }
+
+//         const newEvent = new Event({
+//             name,
+//             description,
+//             tags,
+//             startDate,
+//             endDate,
+//             location,
+//             images,
+//             availableSeats: totalSeats,
+//             totalSeats,
+//             customFields,
+//             createdBy: userId,
+//             eventStatus: isUserVerified ? 'VERIFIED' : 'CREATED'
+//         });
+
+//         await newEvent.save();
+//         res.status(201).json({ message: 'Event created successfully', event: newEvent });
+//     } catch (err: any) {
+//         res.status(500).json({ message: 'Error creating event', error: err.message });
+//     }
+// };
+
+const createEvent: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
+    const { name, description, eventType, targetAudience, tags, startDate, endDate, location, totalSeats, isOnline, price, customFields } = req.body;
     const userId = req.user?.id;
     const isUserVerified = req.user?.status === 'VERIFIED_USER';
+
+    console.log('in controller')
     try {
-        if (tags && !Array.isArray(tags)) {
+        const tagsProc = JSON.parse(tags);
+        const locationProc = JSON.parse(location);
+
+        if (tagsProc && !Array.isArray(tagsProc)) {
             res.status(400).json({ message: 'Tags must be an array' });
             return;
         }
 
-        // Check if tags are provided in the request
-        if (tags && tags.length > 0) {
-            // Fetch all tags from the database
-            const existingTags = await EventTag.find({ '_id': { $in: tags } });
-
-            // Check if all tags in the request exist in the database
-            if (existingTags.length !== tags.length) {
+        if (tagsProc && tagsProc.length > 0) {
+            const existingTags = await EventTag.find({ _id: { $in: tags } });
+            if (existingTags.length !== tagsProc.length) {
                 res.status(400).json({ message: 'One or more tags do not exist in the database' });
                 return;
             }
         }
 
+        // Handle file uploads with Cloudinary
+        const uploadedImages: string[] = [];
+        if (req.files) {
+            // Type casting to Express.Multer.File[]
+            const files = req.files as unknown as Express.Multer.File[];  // Casting `req.files` to the appropriate type
+
+            for (const file of files) {
+                try {
+                    // If using multer with disk storage, file.path will exist
+                    const uploadResult = await uploadImageToCloudinary(file.path, {
+                        folder: 'events', // Optional folder for organization in Cloudinary
+                        transformation: { width: 800, height: 600, crop: 'fill' }, // Optional image transformations
+                    });
+                    uploadedImages.push(uploadResult.url); // Save the URL of the uploaded image
+                } catch (error) {
+                    res.status(500).json({ message: 'Error uploading image to Cloudinary', error: error.message });
+                    return;
+                }
+            }
+        }
+
+        // Створюємо подію
         const newEvent = new Event({
             name,
             description,
-            tags,
+            tags: tagsProc,
             startDate,
             endDate,
-            location,
-            images,
+            isOnline,
+            eventType,
+            targetAudience,
+            location: locationProc,
+            images: uploadedImages,
             availableSeats: totalSeats,
             totalSeats,
             customFields,
             createdBy: userId,
-            eventStatus: isUserVerified ? 'VERIFIED' : 'CREATED'
+            eventStatus: isUserVerified ? 'VERIFIED' : 'CREATED',
         });
 
         await newEvent.save();
@@ -230,7 +303,8 @@ const getComments: RequestHandler = async (req: UserRequest, res: Response): Pro
         }
 
         const comments = await Comment.find()
-            .populate('userId', 'name email avatarURL')
+            .populate('userId', '_id name email avatarURL')
+            .sort({ date: -1 })
             .exec();
         res.status(200).json(comments);
 
@@ -254,7 +328,9 @@ const addComment: RequestHandler = async (req: UserRequest, res: Response): Prom
                 eventId,
             });
             await comment.save();
-            res.status(200).json({ message: 'Comment added successfully', comment });
+            const populatedComment = await Comment.findById(comment._id)
+                .populate('userId', '_id name email avatarURL');
+            res.status(200).json({ message: 'Comment added successfully', comment: populatedComment });
         }
     } catch (err: any) {
         res.status(500).json({ message: 'Error adding comment', error: err.message });

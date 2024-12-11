@@ -3,12 +3,13 @@ import express from "express";
 import validateBody from "../helpers/validateBody";
 import authMiddleware, { notStrictAuthMiddleware } from "../middleware/auth";
 import { bookingSchema, commentSchema, eventSchema } from "../schemas/eventSchema";
+import upload from "middleware/upload";
 
 const router = express.Router();
 
 //Events CRUD
 router.get('/', notStrictAuthMiddleware, eventController.getAllEvents);
-router.post('/', authMiddleware, validateBody(eventSchema), eventController.createEvent);
+router.post('/', authMiddleware, upload.array('images', 5), validateBody(eventSchema), eventController.createEvent);
 router.get('/:id', notStrictAuthMiddleware, eventController.getEventById);
 router.put('/:id', authMiddleware, validateBody(eventSchema), eventController.updateEvent);
 router.delete('/:id', authMiddleware, eventController.deleteEvent);
