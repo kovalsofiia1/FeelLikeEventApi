@@ -7,11 +7,13 @@ import upload from "middleware/upload";
 
 const router = express.Router();
 
+router.get('/cities', eventController.getCities);
+
 //Events CRUD
 router.get('/', notStrictAuthMiddleware, eventController.getAllEvents);
-router.post('/', authMiddleware, upload.array('images', 5), validateBody(eventSchema), eventController.createEvent);
+router.post('/', authMiddleware, upload.single('images'), validateBody(eventSchema), eventController.createEvent);
 router.get('/:id', notStrictAuthMiddleware, eventController.getEventById);
-router.put('/:id', authMiddleware, validateBody(eventSchema), eventController.updateEvent);
+router.put('/:id', authMiddleware, upload.single('images'), validateBody(eventSchema), eventController.updateEvent);
 router.delete('/:id', authMiddleware, eventController.deleteEvent);
 
 
@@ -29,6 +31,5 @@ router.get('/:id/booked-users', authMiddleware, eventController.getBookedUsers);
 //VERIFYING EVENTS FOR ADMIN
 router.patch('/:id/verify', authMiddleware, eventController.verifyEvent);
 router.patch('/:id/decline', authMiddleware, eventController.declineEvent);
-
 
 export { router as EventRouter };

@@ -281,7 +281,10 @@ const deleteEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             return;
         }
 
-        if (event.createdBy!.toString() !== userId || !userIsAdmin) {
+
+        console.log(event.createdBy!.toString() !== userId)
+
+        if (event.createdBy!.toString() !== userId && !userIsAdmin) {
             res.status(403).json({ message: 'You are not authorized to delete this event' });
             return;
         }
@@ -528,6 +531,38 @@ export const declineEvent: RequestHandler = async (req: UserRequest, res: Respon
     await changeEventStatus(eventId, 'DECLINED', res);
 };
 
+export const getCities: RequestHandler = async (req: Request, res: Response) => {
+    try {
+        console.log("Fetching all events to extract unique cities...");
+
+        // Retrieve all events from the database
+        const events = await Event.find().exec();
+
+        // Use a Set to store unique cities
+        const citiesSet = new Set<string>();
+
+        // Iterate over all events and add each city to the Set
+        events.forEach((event) => {
+            if (event.location && event.location.city) {
+                citiesSet.add(event.location.city);
+            }
+        });
+
+        // Convert the Set to an array and sort alphabetically
+        const citiesArray = Array.from(citiesSet).sort();
+
+        // Send the unique cities as a response
+        res.status(200).json(citiesArray);
+    } catch (err) {
+        console.error('Error fetching cities:', err);
+        // Return a structured error response
+        res.status(500).json({
+            message: 'Error fetching cities',
+            error: err.message
+        });
+    }
+};
+
 export default {
     getAllEvents,
     createEvent,
@@ -541,5 +576,6 @@ export default {
     deleteComment,
     verifyEvent,
     declineEvent,
-    getComments
+    getComments,
+    getCities
 };
