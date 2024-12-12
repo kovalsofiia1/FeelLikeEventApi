@@ -33,7 +33,7 @@ interface IEvent extends Document {
     description: string;
     eventType: EventType;
     targetAudience: AudienceType;
-    tags: mongoose.Types.ObjectId[];
+    tags: string[];
     startDate: Date;
     endDate: Date;
     isOnline?: string | null;
@@ -72,7 +72,7 @@ const EventSchema: Schema<IEvent> = new Schema(
             ],
             required: true,
         },
-        tags: [{ type: mongoose.Schema.Types.ObjectId, ref: "EventTag" }],
+        tags: [{ type: String }],
         startDate: { type: Date, required: true },
         endDate: { type: Date, required: true },
         isOnline: { type: String },

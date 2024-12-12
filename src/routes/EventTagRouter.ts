@@ -1,5 +1,5 @@
 import express from 'express';
-import TagsController from '../controllers/EventTag';
+import TagsController from '../controllers/EventTagController';
 import authMiddleware from '../middleware/auth';
 
 const router = express.Router();

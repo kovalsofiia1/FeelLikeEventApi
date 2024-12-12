@@ -3,7 +3,7 @@ import { Event, EventStatus } from "../models/Event";
 import mongoose from 'mongoose';
 import { Comment } from '../models/Comment';
 import { Booking } from '../models/Booking';
-import { EventTag } from '../models/EventTag';
+import { EventTag, EventTagI } from '../models/EventTag';
 import { Like } from '../models/Like';
 import { Bookmark } from '../models/Bookmark';
 import { uploadImageToCloudinary } from '../helpers/cloudinary';
@@ -31,14 +31,29 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
     try {
         const userId = req.user?.id;
 
-        // Fetch all events
+        // Get pagination parameters (default values)
+        const page = parseInt(req.query.page as string) || 1; // Default page is 1
+        const pageSize = parseInt(req.query.pageSize as string) || 10; // Default pageSize is 10
+
+        // Calculate the number of documents to skip based on page
+        const skip = (page - 1) * pageSize;
+
+        // Fetch all events, sorted by createdAt (newest first)
         const events = await Event.find()
             .populate('createdBy', '_id name avatarURL')
+            .sort({ createdAt: -1 }) // Sort by createdAt, newest first
+            .skip(skip) // Skip events based on page
+            .limit(pageSize) // Limit the number of results per page
             .exec();
+
+        // Get the total count of events for pagination metadata
+        const totalEvents = await Event.countDocuments();
+
+        // Reverse the order of the fetched events to show them from the end
+        const reversedEvents = events//.reverse();
 
         // Check if the user is logged in
         if (userId) {
-            console.log(userId)
             // Fetch liked and saved event IDs for the user
             const likedEvents = await Like.find({ userId }).select('eventId').lean();
             const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
@@ -48,20 +63,37 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
             const savedEventIds = savedEvents.map((save) => save.eventId.toString());
 
             // Add liked and saved flags to each event
-            const updatedEvents = events.map((event) => ({
+            const updatedEvents = reversedEvents.map((event) => ({
                 ...event.toObject(),
                 isLiked: likedEventIds.includes(event._id.toString()),
                 isSaved: savedEventIds.includes(event._id.toString()),
             }));
 
-            res.status(200).json(updatedEvents.reverse());
+            // Send response with pagination metadata
+            res.status(200).json({
+                events: updatedEvents,
+                pagination: {
+                    page,
+                    pageSize,
+                    totalPages: Math.ceil(totalEvents / pageSize),
+                    totalEvents,
+                },
+            });
         } else {
             // If the user is not logged in, return events without modifications
-            res.status(200).json(events.reverse());
+            res.status(200).json({
+                events: reversedEvents,
+                pagination: {
+                    page,
+                    pageSize,
+                    totalPages: Math.ceil(totalEvents / pageSize),
+                    totalEvents,
+                },
+            });
         }
 
     } catch (err: any) {
-        res.status(500).json({ message: 'Error fetching event', error: err.message });
+        res.status(500).json({ message: 'Error fetching events', error: err.message });
     }
 }
 
@@ -111,19 +143,28 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
 
     console.log('in controller')
     try {
-        const tagsProc = JSON.parse(tags);
-        const locationProc = location ? JSON.parse(location) : '';
 
-        if (tagsProc && !Array.isArray(tagsProc)) {
+        const locationProc = location ? JSON.parse(location) : '';
+        const tagsProc = JSON.parse(tags)?.map((tag: string) => tag.toLowerCase().trim()) || [];
+
+        if (!Array.isArray(tagsProc)) {
             res.status(400).json({ message: 'Tags must be an array' });
             return;
         }
 
-        if (tagsProc && tagsProc.length > 0) {
-            const existingTags = await EventTag.find({ _id: { $in: tags } });
-            if (existingTags.length !== tagsProc.length) {
-                res.status(400).json({ message: 'One or more tags do not exist in the database' });
-                return;
+        const processedTags: string[] = [];
+
+        for (const tag of tagsProc) {
+            // Check if the tag exists in the database (case insensitive)
+            const existingTag = await EventTag.findOne({ name: tag.toLowerCase() });
+
+            if (existingTag) {
+                processedTags.push(existingTag.name as string); // Use the existing tag's ID
+            } else {
+                // Add the new tag to the database
+                const newTag = new EventTag({ name: tag.toLowerCase() });
+                await newTag.save();
+                processedTags.push(newTag.name as string); // Use the new tag's ID
             }
         }
 
@@ -152,7 +193,7 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
         const newEvent = new Event({
             name,
             description,
-            tags: tagsProc,
+            tags: processedTags,
             startDate,
             endDate,
             isOnline,
@@ -193,21 +234,31 @@ const updateEvent: RequestHandler = async (req: UserRequestWithFiles, res: Respo
             return;
         }
 
-        const tagsProc = tags ? JSON.parse(tags) : undefined;
         const locationProc = location ? JSON.parse(location) : undefined;
 
-        if (tagsProc && !Array.isArray(tagsProc)) {
+        const tagsProc = JSON.parse(tags)?.map((tag: string) => tag.toLowerCase().trim()) || [];
+
+        if (!Array.isArray(tagsProc)) {
             res.status(400).json({ message: 'Tags must be an array' });
             return;
         }
 
-        if (tagsProc && tagsProc.length > 0) {
-            const existingTags = await EventTag.find({ _id: { $in: tagsProc } });
-            if (existingTags.length !== tagsProc.length) {
-                res.status(400).json({ message: 'One or more tags do not exist in the database' });
-                return;
+        const processedTags: string[] = [];
+
+        for (const tag of tagsProc) {
+            // Check if the tag exists in the database (case insensitive)
+            const existingTag = await EventTag.findOne({ name: tag.toLowerCase() });
+
+            if (existingTag) {
+                processedTags.push(existingTag.name as string); // Use the existing tag's ID
+            } else {
+                // Add the new tag to the database
+                const newTag = new EventTag({ name: tag.toLowerCase() });
+                await newTag.save();
+                processedTags.push(newTag.name as string); // Use the new tag's ID
             }
         }
+
         // Handle file uploads with Cloudinary
         const uploadedImages: string[] = []; // Retain existing images
         if (req.files) {
@@ -231,7 +282,7 @@ const updateEvent: RequestHandler = async (req: UserRequestWithFiles, res: Respo
         const updatedEvent = await Event.findByIdAndUpdate(req.params.id, {
             name,
             description,
-            tags: tagsProc,
+            tags: processedTags,
             startDate,
             endDate,
             isOnline: isOnline ? isOnline : null,
