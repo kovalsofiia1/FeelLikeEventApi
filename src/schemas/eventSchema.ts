@@ -4,7 +4,7 @@ import Joi from 'joi';
 // Define the eventSchema based on your Mongoose model
 export const eventSchema = Joi.object({
   name: Joi.string().min(3).required(), // Name of the event (required, min 3 chars)
-  description: Joi.string().min(10).required(), // Description of the event (required, min 10 chars)
+  description: Joi.string().min(3).required(), // Description of the event (required, min 10 chars)
   startDate: Joi.date().iso().required(), // Start date in ISO format (required)
   endDate: Joi.date().iso().greater(Joi.ref('startDate')).required(), // End date must be after start date
   isOnline: Joi.string().pattern(URL_PATTERN).optional(),
