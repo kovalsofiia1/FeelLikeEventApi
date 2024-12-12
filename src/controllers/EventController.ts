@@ -1,5 +1,5 @@
 import { Request, RequestHandler, Response } from 'express';
-import { Event, EventStatus } from "../models/Event";
+import { AudienceType, Event, EventStatus, EventType } from "../models/Event";
 import mongoose from 'mongoose';
 import { Comment } from '../models/Comment';
 import { Booking } from '../models/Booking';
@@ -27,49 +27,166 @@ interface UserRequestWithFiles extends Request {
     }
 }
 
+// const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
+//     try {
+//         const userId = req.user?.id;
+
+//         // Get pagination parameters (default values)
+//         const page = parseInt(req.query.page as string) || 1; // Default page is 1
+//         const pageSize = parseInt(req.query.pageSize as string) || 10; // Default pageSize is 10
+
+//         // Calculate the number of documents to skip based on page
+//         const skip = (page - 1) * pageSize;
+
+//         // Fetch all events, sorted by createdAt (newest first)
+//         const events = await Event.find()
+//             .populate('createdBy', '_id name avatarURL')
+//             .sort({ createdAt: -1 }) // Sort by createdAt, newest first
+//             .skip(skip) // Skip events based on page
+//             .limit(pageSize) // Limit the number of results per page
+//             .exec();
+
+//         // Get the total count of events for pagination metadata
+//         const totalEvents = await Event.countDocuments();
+
+//         // Reverse the order of the fetched events to show them from the end
+//         const reversedEvents = events//.reverse();
+
+//         // Check if the user is logged in
+//         if (userId) {
+//             // Fetch liked and saved event IDs for the user
+//             const likedEvents = await Like.find({ userId }).select('eventId').lean();
+//             const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
+
+//             // Extract event IDs from the liked and saved documents
+//             const likedEventIds = likedEvents.map((like) => like.eventId.toString());
+//             const savedEventIds = savedEvents.map((save) => save.eventId.toString());
+
+//             // Add liked and saved flags to each event
+//             const updatedEvents = reversedEvents.map((event) => ({
+//                 ...event.toObject(),
+//                 isLiked: likedEventIds.includes(event._id.toString()),
+//                 isSaved: savedEventIds.includes(event._id.toString()),
+//             }));
+
+//             // Send response with pagination metadata
+//             res.status(200).json({
+//                 events: updatedEvents,
+//                 pagination: {
+//                     page,
+//                     pageSize,
+//                     totalPages: Math.ceil(totalEvents / pageSize),
+//                     totalEvents,
+//                 },
+//             });
+//         } else {
+//             // If the user is not logged in, return events without modifications
+//             res.status(200).json({
+//                 events: reversedEvents,
+//                 pagination: {
+//                     page,
+//                     pageSize,
+//                     totalPages: Math.ceil(totalEvents / pageSize),
+//                     totalEvents,
+//                 },
+//             });
+//         }
+
+//     } catch (err: any) {
+//         res.status(500).json({ message: 'Error fetching events', error: err.message });
+//     }
+// }
 const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user?.id;
 
         // Get pagination parameters (default values)
-        const page = parseInt(req.query.page as string) || 1; // Default page is 1
-        const pageSize = parseInt(req.query.pageSize as string) || 10; // Default pageSize is 10
-
-        // Calculate the number of documents to skip based on page
+        const page = Math.max(1, parseInt(req.query.page as string) || 1);
+        const pageSize = Math.max(1, parseInt(req.query.pageSize as string) || 10);
         const skip = (page - 1) * pageSize;
 
-        // Fetch all events, sorted by createdAt (newest first)
-        const events = await Event.find()
-            .populate('createdBy', '_id name avatarURL')
-            .sort({ createdAt: -1 }) // Sort by createdAt, newest first
-            .skip(skip) // Skip events based on page
-            .limit(pageSize) // Limit the number of results per page
+        // Get filter parameters from query (if any)
+        const searchQuery = req.query.searchQuery as string || '';
+        const timeFilter = req.query.timeFilter as string || '';
+        const locationFilters = (req.query.locationFilter as string || '').split(',').filter(Boolean);
+        const eventTypeFilters = (req.query.eventType as string || '').split(',').filter(Boolean);
+        const targetAudienceFilters = (req.query.targetAudience as string || '').split(',').filter(Boolean);
+
+        // Initialize an array to hold all conditions for $and
+        const andConditions: any[] = [];
+
+        // Filter by search query (event name)
+        if (searchQuery) {
+            andConditions.push({ name: { $regex: searchQuery, $options: "i" } });
+        }
+
+        // Filter by time (today, future, past)
+        if (timeFilter) {
+            const now = new Date();
+            if (timeFilter === 'today') {
+                const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+                const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+                andConditions.push({ startDate: { $gte: startOfDay, $lte: endOfDay } });
+            } else if (timeFilter === 'future') {
+                andConditions.push({ startDate: { $gte: now } });
+            } else if (timeFilter === 'past') {
+                andConditions.push({ startDate: { $lt: now } });
+            }
+        }
+
+        // Filter by event types
+        if (eventTypeFilters.length > 0) {
+            andConditions.push({ eventType: { $in: eventTypeFilters } });
+        }
+
+        // Filter by target audience
+        if (targetAudienceFilters.length > 0) {
+            andConditions.push({ targetAudience: { $in: targetAudienceFilters } });
+        }
+
+        // Filter by location (online or specific cities)
+        if (locationFilters.length > 0) {
+            let locationFiltersObj: any[] = []
+            if (locationFilters.includes('online')) {
+                locationFiltersObj.push({ isOnline: { $ne: null } });
+            }
+
+            const cityFilters = locationFilters.filter(location => location !== 'online');
+            if (cityFilters.length > 0) {
+                locationFiltersObj.push({ 'location.city': { $in: cityFilters } });
+            }
+
+            if (locationFiltersObj.length > 0) {
+                andConditions.push({ $or: locationFiltersObj });
+            }
+        }
+
+        // Combine all conditions into a single filter object
+        const filterConditions = andConditions.length > 0 ? { $and: andConditions } : {};
+
+        // Fetch the events with filters, sorted by createdAt (newest first)
+        const events = await Event.find(filterConditions)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(pageSize)
             .exec();
 
-        // Get the total count of events for pagination metadata
-        const totalEvents = await Event.countDocuments();
+        // Get the total count of filtered events for pagination metadata
+        const totalEvents = await Event.countDocuments(filterConditions);
 
-        // Reverse the order of the fetched events to show them from the end
-        const reversedEvents = events//.reverse();
-
-        // Check if the user is logged in
+        // Add user-specific fields if logged in
         if (userId) {
-            // Fetch liked and saved event IDs for the user
             const likedEvents = await Like.find({ userId }).select('eventId').lean();
             const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
-
-            // Extract event IDs from the liked and saved documents
             const likedEventIds = likedEvents.map((like) => like.eventId.toString());
             const savedEventIds = savedEvents.map((save) => save.eventId.toString());
 
-            // Add liked and saved flags to each event
-            const updatedEvents = reversedEvents.map((event) => ({
+            const updatedEvents = events.map((event) => ({
                 ...event.toObject(),
                 isLiked: likedEventIds.includes(event._id.toString()),
                 isSaved: savedEventIds.includes(event._id.toString()),
             }));
 
-            // Send response with pagination metadata
             res.status(200).json({
                 events: updatedEvents,
                 pagination: {
@@ -80,9 +197,8 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
                 },
             });
         } else {
-            // If the user is not logged in, return events without modifications
             res.status(200).json({
-                events: reversedEvents,
+                events,
                 pagination: {
                     page,
                     pageSize,
@@ -91,11 +207,12 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
                 },
             });
         }
-
     } catch (err: any) {
+        console.error('Error fetching events:', err);
         res.status(500).json({ message: 'Error fetching events', error: err.message });
     }
-}
+};
+
 
 const getEventById: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     const userId = req.user?.id;
