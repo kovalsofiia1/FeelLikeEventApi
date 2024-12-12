@@ -9,17 +9,6 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Функція для завантаження одного зображення
-// export const uploadImageToCloudinary = async (filePath: string, options = {}): Promise<{ url: string; public_id: string }> => {
-//   try {
-//     const result = await cloudinary.uploader.upload(filePath, options);
-//     return { url: result.secure_url, public_id: result.public_id };
-//   } catch (error) {
-//     console.error('Error uploading image to Cloudinary:', error.message);
-//     throw new Error('Failed to upload image');
-//   }
-// };
-
 // Upload image to Cloudinary and delete local file
 export const uploadImageToCloudinary = async (filePath: string, options = {}): Promise<{ url: string; public_id: string }> => {
   try {

@@ -3,7 +3,7 @@ import express from "express";
 import validateBody from "../helpers/validateBody";
 import authMiddleware, { notStrictAuthMiddleware } from "../middleware/auth";
 import { bookingSchema, commentSchema, eventSchema } from "../schemas/eventSchema";
-import upload from "middleware/upload";
+import upload from "../middleware/upload";
 
 const router = express.Router();
 

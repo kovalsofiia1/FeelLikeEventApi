@@ -36,7 +36,7 @@ interface IEvent extends Document {
     tags: mongoose.Types.ObjectId[];
     startDate: Date;
     endDate: Date;
-    isOnline?: string;
+    isOnline?: string | null;
     location?: {
         country: string;
         city: string;

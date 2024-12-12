@@ -10,7 +10,7 @@ export const eventSchema = Joi.object({
   isOnline: Joi.string().pattern(URL_PATTERN).optional(),
   location: Joi.string().optional(), // Location is now an object (required)
   totalSeats: Joi.number().integer().min(1).required(), // Total number of seats (required, at least 1)
-  price: Joi.number().greater(0).required(), // Price (required, must be greater than 0)
+  price: Joi.number().min(0).required(), // Price (required, must be greater than 0)
   customFields: Joi.object().optional(), // Custom fields (optional, flexible object)
   tags: Joi.string().optional(), // Tags (array of ObjectIds, optional)
   targetAudience: Joi.string()

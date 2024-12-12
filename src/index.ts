@@ -9,8 +9,8 @@ import EventTagRouter from "./routes/EventTagRouter";
 import UserRouter from "./routes/UserRouter";
 import { LikeRouter } from "./routes/LikeRouter";
 import { BookmarkRouter } from "./routes/BookmarkRouter";
-import { urlencoded } from "body-parser";
-
+import { urlencoded } from "express";
+import { Request, Response, NextFunction } from 'express';
 
 const app = express();
 
@@ -26,16 +26,14 @@ app.use('/user', UserRouter);
 app.use('/like', LikeRouter);
 app.use('/bookmark', BookmarkRouter);
 
-
-app.use((_, res) => {
+app.use((_: Request, res: Response) => {
     res.status(404).json({ message: 'Route not found' });
 });
 
-app.use((err, req, res, next) => {
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
     const { status = 500, message = 'Server error' } = err;
     res.status(status).json({ message });
 });
-
 const port = process.env.PORT || 3000;
 
 app.listen(port, () => console.log(`Listening port ${port}`))
