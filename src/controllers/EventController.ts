@@ -208,9 +208,8 @@ const updateEvent: RequestHandler = async (req: UserRequestWithFiles, res: Respo
                 return;
             }
         }
-        console.log(req.files);
         // Handle file uploads with Cloudinary
-        const uploadedImages: string[] = [...(event.images || [])]; // Retain existing images
+        const uploadedImages: string[] = []; // Retain existing images
         if (req.files) {
 
             const files = req.files as unknown as Express.Multer.File[];
