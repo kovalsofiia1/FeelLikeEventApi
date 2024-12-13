@@ -40,29 +40,44 @@ export const getOtherUserData = async (req: UserRequest, res: Response, next: Ne
 
 // Update the current user's profile
 export const updateProfile = async (req: UserRequest, res: Response, next: NextFunction) => {
-  const { name, email, profileDescription, avatarURL, interests } = req.body;
+  const { name, email, description, phoneNumber, dateOfBirth, avatarURL, interests } = req.body;
 
   try {
 
-    if (interests && !Array.isArray(interests)) {
+    const tagsProc = interests && JSON.parse(interests)?.map((tag: string) => tag.toLowerCase().trim()) || [];
+
+    if (!Array.isArray(tagsProc)) {
       res.status(400).json({ message: 'Tags must be an array' });
       return;
     }
 
-    // Check if tags are provided in the request
-    if (interests && interests.length > 0) {
-      // Fetch all tags from the database
-      const existingTags = await EventTag.find({ '_id': { $in: interests } });
-      // Check if all tags in the request exist in the database
-      if (existingTags.length !== interests.length) {
-        res.status(400).json({ message: 'One or more interests do not exist in the database' });
-        return;
+    const processedTags: string[] = [];
+
+    for (const tag of tagsProc) {
+      // Check if the tag exists in the database (case insensitive)
+      const existingTag = await EventTag.findOne({ name: tag.toLowerCase() });
+
+      if (existingTag) {
+        processedTags.push(existingTag.name as string); // Use the existing tag's ID
+      } else {
+        // Add the new tag to the database
+        const newTag = new EventTag({ name: tag.toLowerCase() });
+        await newTag.save();
+        processedTags.push(newTag.name as string); // Use the new tag's ID
       }
     }
 
     const updatedUser = await User.findByIdAndUpdate(
       req.user?.id,
-      { name, email, profileDescription, avatarURL, interests },
+      {
+        name,
+        email,
+        description,
+        avatarURL,
+        phoneNumber,
+        dateOfBirth,
+        interests: processedTags
+      },
       { new: true, runValidators: true } // Return updated document and run validations
     ).select('-password -token -googleId -verified'); // Exclude password from response
 

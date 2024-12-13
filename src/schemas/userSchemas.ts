@@ -55,12 +55,11 @@ export const profileSchema = Joi.object({
             'string.pattern.base': 'Невірний формат номера телефону.',
         }),
 
-    interests: Joi.array()
-        .items(Joi.string().min(1)) // Array of non-empty strings
-        .optional()
+    interests: Joi.string()
+        .min(1) // Рядок не може бути порожнім
+        .optional() // Поле є необов'язковим
         .messages({
-            'array.base': 'Інтереси мають бути масивом рядків.',
-            'array.items': 'Кожен інтерес має бути рядком.',
+            'string.base': 'Інтереси мають бути рядком.',
+            'string.empty': 'Інтереси не можуть бути порожнім рядком.',
         }),
-
 });

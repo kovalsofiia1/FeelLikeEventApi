@@ -113,7 +113,7 @@ interface IUser extends Document {
     status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
     avatarURL?: string;
     googleId?: string;
-    interests: mongoose.Types.ObjectId[]; // Array of ObjectIds referencing EventTag
+    interests: string[]; // Array of ObjectIds referencing EventTag
     verified: boolean;
     token?: string;
     phoneNumber: string; // Add phoneNumber to the IUser interface
@@ -160,9 +160,13 @@ const userSchema = new mongoose.Schema<IUser>(
             required: false,
         },
 
+        dateOfBirth: {
+            type: String,
+            required: false,
+        },
+
         interests: [{
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'EventTag', // Reference the EventTag model for interests
+            type: String,
             required: false,
         }],
 
