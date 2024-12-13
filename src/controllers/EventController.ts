@@ -27,75 +27,6 @@ interface UserRequestWithFiles extends Request {
     }
 }
 
-// const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
-//     try {
-//         const userId = req.user?.id;
-
-//         // Get pagination parameters (default values)
-//         const page = parseInt(req.query.page as string) || 1; // Default page is 1
-//         const pageSize = parseInt(req.query.pageSize as string) || 10; // Default pageSize is 10
-
-//         // Calculate the number of documents to skip based on page
-//         const skip = (page - 1) * pageSize;
-
-//         // Fetch all events, sorted by createdAt (newest first)
-//         const events = await Event.find()
-//             .populate('createdBy', '_id name avatarURL')
-//             .sort({ createdAt: -1 }) // Sort by createdAt, newest first
-//             .skip(skip) // Skip events based on page
-//             .limit(pageSize) // Limit the number of results per page
-//             .exec();
-
-//         // Get the total count of events for pagination metadata
-//         const totalEvents = await Event.countDocuments();
-
-//         // Reverse the order of the fetched events to show them from the end
-//         const reversedEvents = events//.reverse();
-
-//         // Check if the user is logged in
-//         if (userId) {
-//             // Fetch liked and saved event IDs for the user
-//             const likedEvents = await Like.find({ userId }).select('eventId').lean();
-//             const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
-
-//             // Extract event IDs from the liked and saved documents
-//             const likedEventIds = likedEvents.map((like) => like.eventId.toString());
-//             const savedEventIds = savedEvents.map((save) => save.eventId.toString());
-
-//             // Add liked and saved flags to each event
-//             const updatedEvents = reversedEvents.map((event) => ({
-//                 ...event.toObject(),
-//                 isLiked: likedEventIds.includes(event._id.toString()),
-//                 isSaved: savedEventIds.includes(event._id.toString()),
-//             }));
-
-//             // Send response with pagination metadata
-//             res.status(200).json({
-//                 events: updatedEvents,
-//                 pagination: {
-//                     page,
-//                     pageSize,
-//                     totalPages: Math.ceil(totalEvents / pageSize),
-//                     totalEvents,
-//                 },
-//             });
-//         } else {
-//             // If the user is not logged in, return events without modifications
-//             res.status(200).json({
-//                 events: reversedEvents,
-//                 pagination: {
-//                     page,
-//                     pageSize,
-//                     totalPages: Math.ceil(totalEvents / pageSize),
-//                     totalEvents,
-//                 },
-//             });
-//         }
-
-//     } catch (err: any) {
-//         res.status(500).json({ message: 'Error fetching events', error: err.message });
-//     }
-// }
 const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     try {
         const userId = req.user?.id;
@@ -111,13 +42,38 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
         const locationFilters = (req.query.locationFilter as string || '').split(',').filter(Boolean);
         const eventTypeFilters = (req.query.eventType as string || '').split(',').filter(Boolean);
         const targetAudienceFilters = (req.query.targetAudience as string || '').split(',').filter(Boolean);
+        const savedOnly = req.query.saved === 'true'; // Check if only saved events are requested
 
         // Initialize an array to hold all conditions for $and
         const andConditions: any[] = [];
 
+        // Retrieve saved events if requested
+        let savedEventIds: string[] = [];
+        if (savedOnly) {
+            if (!userId) {
+                res.status(401).json({ message: 'User must be logged in to view saved events' });
+                return;
+            }
+
+            // Get saved event IDs for the user
+            const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
+            savedEventIds = savedEvents.map((bookmark) => bookmark.eventId.toString());
+
+            if (savedEventIds.length === 0) {
+                res.status(200).json({
+                    events: [],
+                    pagination: { page, pageSize, totalPages: 0, totalEvents: 0 },
+                });
+                return
+            }
+
+            // Add condition to filter only saved events
+            andConditions.push({ _id: { $in: savedEventIds } });
+        }
+
         // Filter by search query (event name)
         if (searchQuery) {
-            andConditions.push({ name: { $regex: searchQuery, $options: "i" } });
+            andConditions.push({ name: { $regex: searchQuery, $options: 'i' } });
         }
 
         // Filter by time (today, future, past)
@@ -146,9 +102,9 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 
         // Filter by location (online or specific cities)
         if (locationFilters.length > 0) {
-            let locationFiltersObj: any[] = []
+            const locationFiltersObj: any[] = [];
             if (locationFilters.includes('online')) {
-                locationFiltersObj.push({ isOnline: { $ne: null } });
+                locationFiltersObj.push({ isOnline: true });
             }
 
             const cityFilters = locationFilters.filter(location => location !== 'online');
@@ -172,41 +128,19 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
             .exec();
 
         // Get the total count of filtered events for pagination metadata
-        const totalEvents = await Event.countDocuments(filterConditions);
+        const totalEvents = savedOnly
+            ? savedEventIds.length // Use savedEventIds length when filtering saved events
+            : await Event.countDocuments(filterConditions);
 
-        // Add user-specific fields if logged in
-        if (userId) {
-            const likedEvents = await Like.find({ userId }).select('eventId').lean();
-            const savedEvents = await Bookmark.find({ userId }).select('eventId').lean();
-            const likedEventIds = likedEvents.map((like) => like.eventId.toString());
-            const savedEventIds = savedEvents.map((save) => save.eventId.toString());
-
-            const updatedEvents = events.map((event) => ({
-                ...event.toObject(),
-                isLiked: likedEventIds.includes(event._id.toString()),
-                isSaved: savedEventIds.includes(event._id.toString()),
-            }));
-
-            res.status(200).json({
-                events: updatedEvents,
-                pagination: {
-                    page,
-                    pageSize,
-                    totalPages: Math.ceil(totalEvents / pageSize),
-                    totalEvents,
-                },
-            });
-        } else {
-            res.status(200).json({
-                events,
-                pagination: {
-                    page,
-                    pageSize,
-                    totalPages: Math.ceil(totalEvents / pageSize),
-                    totalEvents,
-                },
-            });
-        }
+        res.status(200).json({
+            events,
+            pagination: {
+                page,
+                pageSize,
+                totalPages: Math.ceil(totalEvents / pageSize),
+                totalEvents,
+            },
+        });
     } catch (err: any) {
         console.error('Error fetching events:', err);
         res.status(500).json({ message: 'Error fetching events', error: err.message });
