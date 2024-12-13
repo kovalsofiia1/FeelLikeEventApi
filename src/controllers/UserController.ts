@@ -11,6 +11,38 @@ interface UserRequest extends Request {
     status: 'ADMIN' | 'USER' | 'VERIFIED_USER';
   }
 }
+
+export const getUsers: RequestHandler = async (req, res, next) => {
+  try {
+    const { page = 1, pageSize = 6 } = req.query;
+    const pageNumber = parseInt(page as string, 10);
+    const pageSizeNumber = parseInt(pageSize as string, 10);
+
+    const totalUsers = await User.countDocuments();
+    const totalPages = Math.ceil(totalUsers / pageSizeNumber);
+
+    const users = await User.find()
+      .sort({ createdAt: -1 }) // Newer users first
+      .skip((pageNumber - 1) * pageSizeNumber)
+      .limit(pageSizeNumber)
+      .select("-password -token -googleId -verified"); // Exclude sensitive fields
+
+    res.status(200).json({
+      users,
+      pagination: {
+        page: pageNumber,
+        pageSize: pageSizeNumber,
+        totalUsers,
+        totalPages,
+      },
+    });
+
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    next(new HttpErrors(500, "Failed to fetch users"));
+  }
+};
+
 // Get the currently authenticated user's data
 export const getMyData: RequestHandler = async (req: UserRequest, res: Response, next: NextFunction) => {
   try {

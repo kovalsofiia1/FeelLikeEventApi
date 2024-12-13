@@ -1,4 +1,4 @@
-import { getMyData, getOtherUserData, updateProfile, changeUserStatus } from "../controllers/UserController";
+import { getMyData, getOtherUserData, updateProfile, changeUserStatus, getUsers } from "../controllers/UserController";
 import express from "express";
 import authMiddleware from "../middleware/auth";
 import { profileSchema } from "../schemas/userSchemas";
@@ -6,6 +6,8 @@ import validateBody from "../helpers/validateBody";
 import upload from "../middleware/upload";
 
 const router = express.Router();
+
+router.get('/', authMiddleware, getUsers);
 
 // Get logged-in user's data
 router.get('/me', authMiddleware, getMyData);

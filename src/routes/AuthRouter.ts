@@ -3,8 +3,6 @@ import AuthController from '../controllers/AuthController';
 import {
     registerSchema,
     loginSchema,
-    emailSchema,
-    profileSchema
 } from '../schemas/userSchemas';
 import validateBody from "../helpers/validateBody";
 import authMiddleware from "../middleware/auth";

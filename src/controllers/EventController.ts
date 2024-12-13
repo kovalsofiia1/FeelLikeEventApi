@@ -43,6 +43,7 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
         const eventTypeFilters = (req.query.eventType as string || '').split(',').filter(Boolean);
         const targetAudienceFilters = (req.query.targetAudience as string || '').split(',').filter(Boolean);
         const savedOnly = req.query.saved === 'true'; // Check if only saved events are requested
+        const status = req.query.status as string || 'VERIFIED';
 
         // Initialize an array to hold all conditions for $and
         const andConditions: any[] = [];
@@ -115,6 +116,10 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
             if (locationFiltersObj.length > 0) {
                 andConditions.push({ $or: locationFiltersObj });
             }
+        }
+
+        if (status !== 'ALL') {
+            andConditions.push({ eventStatus: status });
         }
 
         // Combine all conditions into a single filter object

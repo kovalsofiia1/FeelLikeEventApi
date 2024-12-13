@@ -188,7 +188,7 @@ const userSchema = new mongoose.Schema<IUser>(
 
         phoneNumber: {
             type: String,
-            required: [true, 'Phone number is required'],
+            required: false,
             match: PHONE_PATTERN, // Use your phone number pattern for validation
         },
     },
