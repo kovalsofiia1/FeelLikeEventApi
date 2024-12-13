@@ -2,6 +2,7 @@ import { Request, Response, NextFunction, RequestHandler } from 'express';
 import User from '../models/User';
 import HttpErrors from '../helpers/HttpErrors';
 import { EventTag } from '../models/EventTag';
+import { uploadImageToCloudinary } from 'helpers/cloudinary';
 
 interface UserRequest extends Request {
   user?: {
@@ -67,19 +68,42 @@ export const updateProfile = async (req: UserRequest, res: Response, next: NextF
       }
     }
 
+    // Handle file uploads with Cloudinary
+    let newAvatarURL = avatarURL; // Start with the current avatar URL
+    if (req.files) {
+      // Type casting to Express.Multer.File[]
+      const files = req.files as unknown as Express.Multer.File[];  // Casting `req.files` to the appropriate type
+
+      for (const file of files) {
+        try {
+          // If using multer with disk storage, file.path will exist
+          const uploadResult = await uploadImageToCloudinary(file.path, {
+            folder: 'avatars', // Optional folder for organization in Cloudinary
+            transformation: { width: 200, height: 200, crop: 'fill' }, // Optional image transformations
+          });
+          newAvatarURL = uploadResult.url; // Save the URL of the uploaded image
+        } catch (error) {
+          res.status(500).json({ message: 'Error uploading image to Cloudinary', error: error.message });
+          return;
+        }
+      }
+    }
+
+    console.log(newAvatarURL)
+
     const updatedUser = await User.findByIdAndUpdate(
       req.user?.id,
       {
         name,
         email,
         description,
-        avatarURL,
         phoneNumber,
         dateOfBirth,
-        interests: processedTags
+        interests: processedTags,
+        avatarURL: newAvatarURL,
       },
-      { new: true, runValidators: true } // Return updated document and run validations
-    ).select('-password -token -googleId -verified'); // Exclude password from response
+      { new: true, runValidators: true }
+    ).select('-password -token -googleId -verified');
 
     if (!updatedUser) {
       return next(new HttpErrors(404, 'User not found'));

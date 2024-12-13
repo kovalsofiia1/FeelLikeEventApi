@@ -1,10 +1,9 @@
 import { getMyData, getOtherUserData, updateProfile, changeUserStatus } from "../controllers/UserController";
 import express from "express";
-// import validateBody from "../helpers/validateBody";
 import authMiddleware from "../middleware/auth";
 import { profileSchema } from "../schemas/userSchemas";
 import validateBody from "../helpers/validateBody";
-// import { profileSchema } from "../schemas/userSchemas";
+import upload from "../middleware/upload";
 
 const router = express.Router();
 
@@ -15,7 +14,7 @@ router.get('/me', authMiddleware, getMyData);
 router.get('/:userId', getOtherUserData);
 
 // Update logged-in user's profile
-router.put('/me', authMiddleware, validateBody(profileSchema), updateProfile);
+router.put('/me', authMiddleware, upload.array('avatars', 1), validateBody(profileSchema), updateProfile);
 
 // Change another user's status (Admin only)
 router.patch('/:userId/status', authMiddleware, changeUserStatus);
