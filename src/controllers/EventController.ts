@@ -118,6 +118,7 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
             }
         }
 
+        //Filter by status - 'VERIFIED' show users || 'ALL' for admin
         if (status !== 'ALL') {
             andConditions.push({ eventStatus: status });
         }
@@ -654,6 +655,63 @@ export const getCities: RequestHandler = async (req: Request, res: Response) => 
     }
 };
 
+export const getTopEvents: RequestHandler = async (req: Request, res: Response) => {
+    try {
+        const { limit = 5 } = req.query; // Default to top 5 events
+        const limitNumber = parseInt(limit as string, 10);
+
+        // Aggregate bookings to calculate total tickets booked per event
+        const bookingsAggregation = await Booking.aggregate([
+            {
+                $lookup: {
+                    from: "events", // Name of the events collection
+                    localField: "eventId",
+                    foreignField: "_id",
+                    as: "eventDetails",
+                },
+            },
+            { $unwind: "$eventDetails" }, // Flatten the event details array
+            {
+                $match: {
+                    "eventDetails.startDate": { $gt: new Date() }, // Only future events
+                    "eventDetails.eventStatus": "VERIFIED", // Only verified events
+                },
+            },
+            {
+                $group: {
+                    _id: "$eventId", // Group by event ID
+                    totalTickets: { $sum: "$tickets" }, // Sum the tickets
+                    eventDetails: { $first: "$eventDetails" }, // Include event details
+                },
+            },
+            {
+                $addFields: {
+                    bookedSeats: {
+                        $subtract: [
+                            "$eventDetails.totalSeats", // Total seats
+                            "$eventDetails.availableSeats", // Available seats
+                        ],
+                    },
+                },
+            },
+            { $sort: { bookedSeats: -1 } }, // Sort by booked seats (totalSeats - availableSeats)
+            { $limit: limitNumber }, // Limit the number of results
+        ]);
+
+        // Format the response
+        const topEvents = bookingsAggregation.map((entry) => ({
+            eventId: entry._id,
+            totalTickets: entry.totalTickets,
+            ...entry.eventDetails,
+        }));
+
+        res.status(200).json({ topEvents });
+    } catch (error) {
+        console.error("Error fetching top events:", error);
+        res.status(500).json({ message: "Failed to fetch top events" });
+    }
+};
+
 export default {
     getAllEvents,
     createEvent,
@@ -668,5 +726,6 @@ export default {
     verifyEvent,
     declineEvent,
     getComments,
-    getCities
+    getCities,
+    getTopEvents
 };

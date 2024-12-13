@@ -12,6 +12,8 @@ router.get('/cities', eventController.getCities);
 //Events CRUD
 router.get('/', notStrictAuthMiddleware, eventController.getAllEvents);
 router.post('/', authMiddleware, upload.array('images', 1), validateBody(eventSchema), eventController.createEvent);
+router.get('/top', eventController.getTopEvents);
+
 router.get('/:id', notStrictAuthMiddleware, eventController.getEventById);
 router.put('/:id', authMiddleware, upload.array('images', 1), validateBody(eventSchema), eventController.updateEvent);
 router.delete('/:id', authMiddleware, eventController.deleteEvent);
