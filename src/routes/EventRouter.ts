@@ -13,6 +13,7 @@ router.get('/cities', eventController.getCities);
 router.get('/', notStrictAuthMiddleware, eventController.getAllEvents);
 router.post('/', authMiddleware, upload.array('images', 1), validateBody(eventSchema), eventController.createEvent);
 router.get('/top', eventController.getTopEvents);
+router.get('/me', authMiddleware, eventController.getMyEvents);
 
 router.get('/:id', notStrictAuthMiddleware, eventController.getEventById);
 router.put('/:id', authMiddleware, upload.array('images', 1), validateBody(eventSchema), eventController.updateEvent);

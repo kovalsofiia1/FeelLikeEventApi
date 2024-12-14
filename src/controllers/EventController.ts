@@ -712,6 +712,109 @@ export const getTopEvents: RequestHandler = async (req: Request, res: Response) 
     }
 };
 
+export const getMyEvents: RequestHandler = async (req: UserRequest, res: Response) => {
+    try {
+        const userId = req.user?.id; // Assuming userId is passed from the authenticated user (req.user.id)
+
+        // Fetch bookings for the user
+        const eventsAggregation = await Booking.aggregate([
+            {
+                $match: { userId: new mongoose.Types.ObjectId(userId) }, // Match userId in bookings
+            },
+            {
+                $lookup: {
+                    from: "events", // Lookup from events collection
+                    localField: "eventId", // Join on eventId
+                    foreignField: "_id", // Match against _id of events
+                    as: "eventDetails", // Alias the event details
+                },
+            },
+            { $unwind: "$eventDetails" }, // Flatten the event details
+            {
+                $project: {
+                    eventId: 1,
+                    tickets: 1, // Number of tickets booked
+                    // Flatten the event fields to be at the root level
+                    name: "$eventDetails.name",
+                    description: "$eventDetails.description",
+                    startDate: "$eventDetails.startDate",
+                    endDate: "$eventDetails.endDate",
+                    isOnline: "$eventDetails.isOnline",
+                    location: "$eventDetails.location",
+                    totalSeats: "$eventDetails.totalSeats",
+                    availableSeats: "$eventDetails.availableSeats",
+                    eventType: "$eventDetails.eventType",
+                    tags: "$eventDetails.tags",
+                    images: "$eventDetails.images",
+                    createdBy: "$eventDetails.createdBy",
+                    customFields: "$eventDetails.customFields",
+                },
+            },
+            {
+                $facet: {
+                    // Get future booked events
+                    bookedEvents: [
+                        {
+                            $match: {
+                                startDate: { $gt: new Date() }, // Future events only
+                            },
+                        },
+                    ],
+                    // Get past visited events
+                    visitedEvents: [
+                        {
+                            $match: {
+                                startDate: { $lt: new Date() }, // Past events only
+                            },
+                        },
+                    ],
+                },
+            },
+        ]);
+
+        // Fetch events created by the user
+        const createdEventsAggregation = await Event.aggregate([
+            {
+                $match: { createdBy: new mongoose.Types.ObjectId(userId) }, // Filter by createdBy field
+            },
+            { $sort: { startDate: 1 } }, // Sort by event start date
+            {
+                $project: {
+                    eventId: "$_id", // Use _id as eventId
+                    name: 1,
+                    description: 1,
+                    startDate: 1,
+                    endDate: 1,
+                    isOnline: 1,
+                    location: 1,
+                    totalSeats: 1,
+                    availableSeats: 1,
+                    eventType: 1,
+                    tags: 1,
+                    images: 1,
+                    createdBy: 1,
+                    customFields: 1,
+                },
+            },
+        ]);
+
+        // Format the response
+        const bookedEvents = eventsAggregation[0]?.bookedEvents || [];
+        const visitedEvents = eventsAggregation[0]?.visitedEvents || [];
+        const createdEvents = createdEventsAggregation || [];
+
+        res.status(200).json({
+            bookedEvents,
+            visitedEvents,
+            createdEvents,
+        });
+    } catch (error) {
+        console.error("Error fetching user's events:", error);
+        res.status(500).json({ message: "Failed to fetch user's events" });
+    }
+};
+
+
 export default {
     getAllEvents,
     createEvent,
@@ -727,5 +830,6 @@ export default {
     declineEvent,
     getComments,
     getCities,
-    getTopEvents
+    getTopEvents,
+    getMyEvents
 };
