@@ -1,13 +1,13 @@
 import { Request, RequestHandler, Response } from 'express';
-import { AudienceType, Event, EventStatus, EventType } from "../models/Event";
+import { Event, EventStatus } from "../models/Event";
 import mongoose from 'mongoose';
 import { Comment } from '../models/Comment';
 import { Booking } from '../models/Booking';
-import { EventTag, EventTagI } from '../models/EventTag';
+import { EventTag } from '../models/EventTag';
 import { Like } from '../models/Like';
 import { Bookmark } from '../models/Bookmark';
 import { uploadImageToCloudinary } from '../helpers/cloudinary';
-import multer from 'multer';
+import { evaluateEvent } from 'helpers/evaluateEvents';
 
 interface UserRequest extends Request {
     files?: Express.Multer.File[];
@@ -153,7 +153,6 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
     }
 };
 
-
 const getEventById: RequestHandler = async (req: UserRequest, res: Response): Promise<void> => {
     const userId = req.user?.id;
     try {
@@ -198,7 +197,6 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
     const userId = req.user?.id;
     const isUserVerified = req.user?.status === 'VERIFIED_USER';
 
-    console.log('in controller')
     try {
 
         const locationProc = location ? JSON.parse(location) : '';
@@ -246,6 +244,8 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             }
         }
 
+        const moodScore = evaluateEvent(req.body);
+
         // Створюємо подію
         const newEvent = new Event({
             name,
@@ -263,6 +263,7 @@ const createEvent: RequestHandler = async (req: UserRequest, res: Response): Pro
             totalSeats,
             customFields,
             createdBy: userId,
+            moodScore,
             eventStatus: isUserVerified ? 'VERIFIED' : 'CREATED',
         });
 
@@ -814,6 +815,13 @@ export const getMyEvents: RequestHandler = async (req: UserRequest, res: Respons
     }
 };
 
+export const getEventEvaluation: RequestHandler = async (req: Request, res: Response) => {
+    const result = evaluateEvent(req.body);
+
+    // const analysis = await analyzeMood(req.body);
+
+    res.status(200).json(result);
+}
 
 export default {
     getAllEvents,
@@ -831,5 +839,6 @@ export default {
     getComments,
     getCities,
     getTopEvents,
-    getMyEvents
+    getMyEvents,
+    getEventEvaluation
 };

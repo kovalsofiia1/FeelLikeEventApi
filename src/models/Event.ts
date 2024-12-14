@@ -50,6 +50,7 @@ interface IEvent extends Document {
     eventStatus: EventStatus;
     price: number;
     customFields: Record<string, any>;
+    moodScore: number;
 }
 
 export type EventStatus = 'CREATED' | 'VERIFIED' | 'DECLINED';
@@ -93,6 +94,7 @@ const EventSchema: Schema<IEvent> = new Schema(
         },
         price: { type: Number },
         customFields: { type: Map, of: Schema.Types.Mixed, default: {} },
+        moodScore: { type: Number, required: true, default: 1 },
     },
     { timestamps: true }
 );

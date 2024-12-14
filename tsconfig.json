@@ -4,6 +4,7 @@
     "allowSyntheticDefaultImports": true,
     "emitDecoratorMetadata": true,
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "experimentalDecorators": true,
     "isolatedModules": true,
     "lib": [

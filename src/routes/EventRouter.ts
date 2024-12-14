@@ -7,6 +7,7 @@ import upload from "../middleware/upload";
 
 const router = express.Router();
 
+router.get('/evaluation', eventController.getEventEvaluation);
 router.get('/cities', eventController.getCities);
 
 //Events CRUD
