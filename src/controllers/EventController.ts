@@ -7,7 +7,7 @@ import { EventTag } from '../models/EventTag';
 import { Like } from '../models/Like';
 import { Bookmark } from '../models/Bookmark';
 import { uploadImageToCloudinary } from '../helpers/cloudinary';
-import { evaluateEvent } from 'helpers/evaluateEvents';
+import { evaluateEvent } from '../helpers/evaluateEvents';
 
 interface UserRequest extends Request {
     files?: Express.Multer.File[];

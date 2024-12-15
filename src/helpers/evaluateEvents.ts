@@ -1,4 +1,4 @@
-import { MY_SCORES } from "static/myScores";
+import { MY_SCORES } from "../static/myScores";
 
 const fs = require('fs');
 const path = require('path');
