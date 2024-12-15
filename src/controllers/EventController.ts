@@ -823,6 +823,131 @@ export const getEventEvaluation: RequestHandler = async (req: Request, res: Resp
     res.status(200).json(result);
 }
 
+export const getRecommendations: RequestHandler = async (req: UserRequest, res: Response) => {
+    try {
+        const {
+            ageGroup,
+            dateOption,
+            mood,
+            location,
+            online,
+            specificDate,
+            priceOption,
+        } = req.query;
+
+        const userId = req.user?.id; // Assuming user is logged in and user ID is available
+
+        // Prepare the filter conditions array
+        const andConditions: any[] = [];
+
+        console.log(ageGroup,
+            dateOption,
+            mood,
+            location,
+            online,
+            specificDate,
+            priceOption)
+        // Age Group filter
+        if (ageGroup !== undefined) {
+            andConditions.push({ targetAudience: { $in: [ageGroup] } });
+        }
+
+        const moodRanges: { [key: string]: [number, number] } = {
+            'HAPPY': [0, 100],
+            'NEUTRAL': [-5, 5],
+            'SAD': [-100, 0],
+        };
+
+        // Mood filter
+        if (mood && moodRanges[mood as string]) {
+            const [min, max] = moodRanges[mood as string];
+            andConditions.push({ moodScore: { $gte: min, $lte: max } });
+        }
+        console.log(andConditions)
+
+        // Location filter (online or specific location)
+        if (location !== undefined) {
+            if (location === 'online') {
+                andConditions.push({ isOnline: true });
+            } else {
+                andConditions.push({ 'location.city': { $in: [location] } });
+            }
+        }
+
+        // Online filter
+        if (online !== undefined) {
+            if (online === 'true') {
+                // Assuming `isOnline` is a non-null string when true
+                andConditions.push({ isOnline: { $ne: null } }); // This will check if `isOnline` is not null
+            } else {
+                // Assuming `isOnline` is null when false
+                andConditions.push({ isOnline: null });
+            }
+        }
+
+        // Specific Date filter
+        if (specificDate !== undefined) {
+            // Parse the specific date (assuming the format is YYYY-MM-DD)
+            const startOfDay = new Date(specificDate as string);
+            startOfDay.setHours(0, 0, 0, 0); // Set to midnight
+
+            // Get the start of the next day
+            const endOfDay = new Date(startOfDay);
+            endOfDay.setDate(startOfDay.getDate() + 1); // Move to the next day and set time to midnight
+
+            // Push the filter condition to match events that start within that day
+            andConditions.push({ startDate: { $gte: startOfDay, $lt: endOfDay } });
+
+        } else if (dateOption !== undefined) {
+            const now = new Date();
+            if (dateOption === 'TODAY') {
+                const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+                const endOfDay = new Date(now.setHours(23, 59, 59, 999));
+                andConditions.push({ startDate: { $gte: startOfDay, $lte: endOfDay } });
+            } else if (dateOption === 'TOMORROW') {
+                const tomorrow = new Date();
+                tomorrow.setDate(now.getDate() + 1);
+                andConditions.push({ startDate: { $gte: tomorrow.setHours(0, 0, 0, 0) } });
+            } else if (dateOption === 'THIS_WEEK') {
+                const startOfWeek = new Date(now.setDate(now.getDate())); // Start of the week (Sunday)
+                const endOfWeek = new Date(now.setDate(now.getDate() + 7)); // End of the week (Saturday)
+                andConditions.push({ startDate: { $gte: startOfWeek, $lte: endOfWeek } });
+            }
+        }
+
+        // Price Option filter
+        if (priceOption !== undefined) {
+            if (priceOption === "FREE") {
+                andConditions.push({ price: 0 });
+            } else if (priceOption === "PAID") {
+                andConditions.push({ price: { $gt: 0 } });
+            }
+        }
+
+        // Combine all conditions into a single filter object
+        const filterConditions = andConditions.length > 0 ? { $and: andConditions } : {};
+
+        console.log(filterConditions)
+        // Fetch recommended events with filters
+        const events = await Event.find(filterConditions)
+            .sort({ startDate: 1 }) // Assuming you want to sort events by start date
+            .exec();
+
+        if (!events || events.length === 0) {
+            res.status(404).json({ message: 'No events found matching your criteria' });
+            return;
+        }
+
+        res.status(200).json({ events });
+    } catch (err: any) {
+        console.error('Error fetching recommendations:', err);
+        res.status(500).json({ message: 'Error fetching recommendations', error: err.message });
+    }
+
+
+}
+
+
 export default {
     getAllEvents,
     createEvent,
@@ -840,5 +965,6 @@ export default {
     getCities,
     getTopEvents,
     getMyEvents,
-    getEventEvaluation
+    getEventEvaluation,
+    getRecommendations
 };

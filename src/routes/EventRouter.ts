@@ -2,14 +2,14 @@ import eventController from "../controllers/EventController";
 import express from "express";
 import validateBody from "../helpers/validateBody";
 import authMiddleware, { notStrictAuthMiddleware } from "../middleware/auth";
-import { bookingSchema, commentSchema, eventSchema } from "../schemas/eventSchema";
+import { bookingSchema, commentSchema, eventSchema, recommendationRequest } from "../schemas/eventSchema";
 import upload from "../middleware/upload";
 
 const router = express.Router();
 
 router.get('/evaluation', eventController.getEventEvaluation);
 router.get('/cities', eventController.getCities);
-
+router.get('/recommendations', authMiddleware, eventController.getRecommendations);
 //Events CRUD
 router.get('/', notStrictAuthMiddleware, eventController.getAllEvents);
 router.post('/', authMiddleware, upload.array('images', 1), validateBody(eventSchema), eventController.createEvent);

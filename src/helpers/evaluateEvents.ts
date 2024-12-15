@@ -8,18 +8,18 @@ let wordScores = { ...MY_SCORES };
 // Оцінки для типів подій
 const eventTypeScores = {
   "CONCERT": 2,
-  "LECTURE": -2,
-  "WEBINAR": -2,
-  "WORKSHOP": -2,
-  "SEMINAR": -2,
-  "MEETUP": -2,
-  "EXHIBITION": -2,
-  "CONFERENCE": -2,
+  "LECTURE": -1,
+  "WEBINAR": -1,
+  "WORKSHOP": -1,
+  "SEMINAR": 0,
+  "MEETUP": -1,
+  "EXHIBITION": -1,
+  "CONFERENCE": -1,
   "FESTIVAL": 2,
   "PARTY": 2,
   "GALA": 1,
-  "SPORTS": -1,
-  "CHARITY": -2,
+  "SPORTS": 1,
+  "CHARITY": -1,
 };
 
 /**

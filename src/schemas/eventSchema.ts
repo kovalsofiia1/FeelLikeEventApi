@@ -58,3 +58,39 @@ export const bookingSchema = Joi.object({
     comment: Joi.string().optional(),
   }).required(),
 });
+
+
+export const recommendationRequest = Joi.object({
+  ageGroup: Joi.string()
+    .valid(
+      'KIDS',
+      'TEENS',
+      'ADULTS',
+      'SENIORS',
+      'PROFESSIONALS',
+      'STUDENTS',
+      'FAMILIES',
+      'CORPORATES',
+      'COMMUNITY',
+      'GENERAL',
+      ''
+    )
+    .required(),
+  dateOption: Joi.string().valid(
+    'TODAY',
+    "TOMORROW",
+    "THIS_WEEK",
+    "SPECIFIC_DATE",
+    ""
+  ).required(),
+  mood: Joi.string().valid(
+    'HAPPY',
+    "NEUTRAL",
+    "SAD",
+    ""
+  ).required(),
+  location: Joi.string().required(),
+  online: Joi.boolean().required(),
+  specific_date: Joi.date().iso().allow(null),
+  priceOption: Joi.string().valid("FREE", "PAID", "").required()
+});

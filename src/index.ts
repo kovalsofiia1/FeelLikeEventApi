@@ -11,6 +11,7 @@ import { LikeRouter } from "./routes/LikeRouter";
 import { BookmarkRouter } from "./routes/BookmarkRouter";
 import { urlencoded } from "express";
 import { Request, Response, NextFunction } from 'express';
+import bodyParser from "body-parser";
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use(morgan("tiny"));
 app.use(cors());
 app.use(express.json());
 app.use(urlencoded({ limit: '50mb' }))
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/auth', AuthRoutes);
 app.use('/events', EventRouter);
