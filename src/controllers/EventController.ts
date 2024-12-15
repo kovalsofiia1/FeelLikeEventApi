@@ -336,6 +336,7 @@ const updateEvent: RequestHandler = async (req: UserRequestWithFiles, res: Respo
                 }
             }
         }
+        const moodScore = evaluateEvent(req.body);
 
         const updatedEvent = await Event.findByIdAndUpdate(req.params.id, {
             name,
@@ -351,6 +352,7 @@ const updateEvent: RequestHandler = async (req: UserRequestWithFiles, res: Respo
             images: uploadedImages,
             availableSeats: totalSeats - (totalSeats - event.availableSeats),
             totalSeats,
+            moodScore,
             customFields,
         }, { new: true });
 
@@ -817,8 +819,6 @@ export const getMyEvents: RequestHandler = async (req: UserRequest, res: Respons
 
 export const getEventEvaluation: RequestHandler = async (req: Request, res: Response) => {
     const result = evaluateEvent(req.body);
-
-    // const analysis = await analyzeMood(req.body);
 
     res.status(200).json(result);
 }
