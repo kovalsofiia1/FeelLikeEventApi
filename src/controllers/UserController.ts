@@ -104,6 +104,7 @@ export const updateProfile = async (req: UserRequest, res: Response, next: NextF
     let newAvatarURL = avatarURL; // Start with the current avatar URL
     if (req.files) {
       // Type casting to Express.Multer.File[]
+      /* eslint-disable no-undef */
       const files = req.files as unknown as Express.Multer.File[];  // Casting `req.files` to the appropriate type
 
       for (const file of files) {

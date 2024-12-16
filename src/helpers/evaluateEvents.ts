@@ -1,8 +1,5 @@
 import { MY_SCORES } from "../static/myScores";
 
-const fs = require('fs');
-const path = require('path');
-
 let wordScores = { ...MY_SCORES };
 
 // Оцінки для типів подій

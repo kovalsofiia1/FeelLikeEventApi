@@ -64,11 +64,8 @@ const logout: RequestHandler = controllerWrapper(async (req, res: Response): Pro
     res.status(204).end();
 })
 
-const updateProfile: RequestHandler = async (req: Request, res: Response): Promise<void> => { }
-
 export default {
     login,
     register,
     logout,
-    updateProfile
 };

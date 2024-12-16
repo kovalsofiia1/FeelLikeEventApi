@@ -1,4 +1,4 @@
-import { Request, RequestHandler, Response } from 'express';
+import { Request, RequestHandler, Response, Express } from 'express';
 import { Event, EventStatus } from "../models/Event";
 import mongoose from 'mongoose';
 import { Comment } from '../models/Comment';
@@ -544,7 +544,6 @@ const getBookedUsers: RequestHandler = async (req: UserRequest, res: Response): 
             .populate('userId', 'name email avatarURL') // Populate user details
             .exec();
 
-        const bookedUsers = bookings.map((booking) => booking.userId);
         res.status(200).json(bookings);
     } catch (err: any) {
         res.status(500).json({ message: 'Error fetching booked users', error: err.message });
@@ -553,7 +552,7 @@ const getBookedUsers: RequestHandler = async (req: UserRequest, res: Response): 
 
 const deleteBooking: RequestHandler = async (req: UserRequest, res: Response): Promise<any> => {
     const eventId = req.params.id;
-    const userId = new mongoose.Types.ObjectId(req.user?.id!);
+    const userId = new mongoose.Types.ObjectId(req.user?.id);
 
     try {
         // Find the booking record for the user and event
@@ -834,8 +833,6 @@ export const getRecommendations: RequestHandler = async (req: UserRequest, res: 
             specificDate,
             priceOption,
         } = req.query;
-
-        const userId = req.user?.id; // Assuming user is logged in and user ID is available
 
         // Prepare the filter conditions array
         const andConditions: any[] = [];

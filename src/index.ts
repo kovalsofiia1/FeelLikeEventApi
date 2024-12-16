@@ -10,7 +10,7 @@ import UserRouter from "./routes/UserRouter";
 import { LikeRouter } from "./routes/LikeRouter";
 import { BookmarkRouter } from "./routes/BookmarkRouter";
 import { urlencoded } from "express";
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import bodyParser from "body-parser";
 
 const app = express();
@@ -32,7 +32,7 @@ app.use((_: Request, res: Response) => {
     res.status(404).json({ message: 'Route not found' });
 });
 
-app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+app.use((err: any, req: Request, res: Response) => {
     const { status = 500, message = 'Server error' } = err;
     res.status(status).json({ message });
 });

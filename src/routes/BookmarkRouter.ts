@@ -1,6 +1,5 @@
 import express from 'express';
 import authMiddleware from '../middleware/auth';
-import LikeController from '../controllers/LikeController';
 import BookmarkController from '../controllers/BookmarkController';
 const router = express.Router();
 
