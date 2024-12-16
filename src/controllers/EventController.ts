@@ -172,6 +172,15 @@ const getEventById: RequestHandler = async (req: UserRequest, res: Response): Pr
             const like = await Like.findOne({ userId, eventId: event._id }).exec();
             const bookmark = await Bookmark.findOne({ userId, eventId: event._id }).exec();
             const booking = await Booking.findOne({ userId, eventId: event._id }).exec();
+
+            let bookings;
+
+            if (userId === event.createdBy._id.toString()) {
+                bookings = await Booking.find({ eventId: req.params.id })
+                    .populate('userId', 'name email avatarURL') // Populate user details
+                    .exec();
+            }
+
             const updatedEvent = {
                 ...event.toObject(),
                 isLiked: !!like,
@@ -179,7 +188,8 @@ const getEventById: RequestHandler = async (req: UserRequest, res: Response): Pr
                 booking: booking && {
                     bookingId: booking._id,
                     tickets: booking.tickets
-                }
+                },
+                ...(bookings ? { bookings } : {}),
             }
             res.status(200).json(updatedEvent);
         } else {
