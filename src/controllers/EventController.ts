@@ -924,6 +924,8 @@ export const getRecommendations: RequestHandler = async (req: UserRequest, res: 
             }
         }
 
+
+        andConditions.push({ eventStatus: 'VERIFIED' });
         // Combine all conditions into a single filter object
         const filterConditions = andConditions.length > 0 ? { $and: andConditions } : {};
 
