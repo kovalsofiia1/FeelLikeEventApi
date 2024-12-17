@@ -38,7 +38,7 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 
         // Get filter parameters from query (if any)
         const searchQuery = req.query.searchQuery as string || '';
-        const timeFilter = req.query.timeFilter as string || '';
+        const timeFilter = req.query.timeFilter as string || 'future';
         const locationFilters = (req.query.locationFilter as string || '').split(',').filter(Boolean);
         const eventTypeFilters = (req.query.eventType as string || '').split(',').filter(Boolean);
         const targetAudienceFilters = (req.query.targetAudience as string || '').split(',').filter(Boolean);
@@ -128,7 +128,7 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 
         // Fetch the events with filters, sorted by createdAt (newest first)
         const events = await Event.find(filterConditions)
-            .sort({ createdAt: -1 })
+            .sort({ startDate: 1 })
             .skip(skip)
             .limit(pageSize)
             .exec();
