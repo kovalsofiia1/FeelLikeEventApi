@@ -38,13 +38,13 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
 
         // Get filter parameters from query (if any)
         const searchQuery = req.query.searchQuery as string || '';
-        const timeFilter = req.query.timeFilter as string || 'future';
+
         const locationFilters = (req.query.locationFilter as string || '').split(',').filter(Boolean);
         const eventTypeFilters = (req.query.eventType as string || '').split(',').filter(Boolean);
         const targetAudienceFilters = (req.query.targetAudience as string || '').split(',').filter(Boolean);
         const savedOnly = req.query.saved === 'true'; // Check if only saved events are requested
         const status = req.query.status as string || 'VERIFIED';
-
+        const timeFilter = req.query.timeFilter as string || (savedOnly ? '' : 'future');
         // Initialize an array to hold all conditions for $and
         const andConditions: any[] = [];
 
