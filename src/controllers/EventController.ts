@@ -1,6 +1,6 @@
 import { Request, RequestHandler, Response, Express } from 'express';
 import { Event, EventStatus } from "../models/Event";
-import mongoose from 'mongoose';
+import mongoose, { SortOrder } from 'mongoose';
 import { Comment } from '../models/Comment';
 import { Booking } from '../models/Booking';
 import { EventTag } from '../models/EventTag';
@@ -123,12 +123,16 @@ const getAllEvents: RequestHandler = async (req: UserRequest, res: Response): Pr
             andConditions.push({ eventStatus: status });
         }
 
+
+        const sortCondition: { [key: string]: SortOrder } =
+            status === 'ALL' ? { createdAt: -1 as SortOrder } : { startDate: 1 as SortOrder };
+
         // Combine all conditions into a single filter object
         const filterConditions = andConditions.length > 0 ? { $and: andConditions } : {};
 
         // Fetch the events with filters, sorted by createdAt (newest first)
         const events = await Event.find(filterConditions)
-            .sort({ startDate: 1 })
+            .sort(sortCondition)
             .skip(skip)
             .limit(pageSize)
             .exec();
